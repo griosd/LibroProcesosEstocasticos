@@ -1,0 +1,313 @@
+%!TEX root = main.tex
+
+\chapter{Procesos Gaussianos Sparse}
+
+\begin{chapquote}{Tata Barahona}
+	``Vino un tiempo largo de aprender a estar sin ti.''
+\end{chapquote}
+
+\comment{parrafo: breve motivación, conectando con capitulo de GP}
+
+\comment{parrafo: resumen sobre capitulo, mencionar que lectura sobre capitulo de GP es importante}
+
+Recordemos que los métodos comunes de inversión de matrices son de orden \(O(n^{3})\), donde \(n\) es el número de datos. Una alternativa para bajar esta complejidad es utilizar un conjunto de datos menor al original, como por ejemplo un subconjunto o directamente un conjunto diferente. Este tipo de enfoque se conoce como aproximación \emph{sparse}\footnote{Si bien la palabra \emph{sparse} admite traducciones como «escaso», «disperso», y «poco denso», hemos optado por mantener el anglicismo, pues consideramos que su uso en español no es muy común.} \cite{22} \cite{32}. Supongamos que tenemos el conjunto de datos \(\calD = \{(t_{i}, x_{i})\}_{i=1}^n\). Denotemos los siguientes elementos:
+
+\begin{itemize}
+	\item \(T_{n} =\{t_{i}\}_{i=1}^{n}\) es el conjunto de entrada, e \(\bfx = \{x_{i}\}_{i=1}^{n}\) el conjunto de salida.
+	\item \(f\) es la función latente (u oculta) tal que \(x_{i} = f(t_{i}) + \varepsilon_{i},\) donde \(t_{i} \sim \calN(0, \sigma_{noise}^{2})\). Denotemos los valores que toma la función latente como \(f_{i} = f(t_{i})\). La distribución posterior de \(\bfx\) es \(p(\bfx \mid \bff) = \calN(\bff, \sigma_{noise}^{2})\).
+	\item \(k\) es una función de covarianza de modo que \(f(t) \sim \GP(0, k(t, \bar{t}))\). Para dos conjuntos de entrada \(T_{n}\) y \(\bar{T}\), entonces denotemos \(k(T_{n}, \bar{T})\) a la matriz de Gram tal que \(k(T_{n}, \bar{T})_{i,j} = k(t_{i}, \bar{t}_{j})\). Si \(\bff = f(T_{n})\) y \(\bar{\bff} = f(\bar{T})\), entonces denotaremos \(K_{\bff, \bff} = k(T_{n}, \bar{T})\) a la matriz de covarianza entre \(\bff\) y \(\bff\).
+	\item Sea \(\bff\) el conjunto de valores latentes para el entrenamiento y \(\bar{\bff}\) el conjunto de valores para la regresión. La distribución conjunto es
+	\[p(\bff, \bar{\bff}) = \calN \left(0, \begin{bmatrix}
+		K_{\bff,\bff} & K_{\bff,\bar{\bff}} \\
+		K_{\bar{\bff},\bff} & K_{\bar{\bff},\bar{\bff}}
+	\end{bmatrix}
+	\right),\]
+	y la posterior de \(\bar{\bff}\) con respecto a \(\bfx\) es
+	\begin{equation*}
+	p(\bar{\bff} \mid \bfx) = \calN\left(K_{\bar{\bff}, \bff} \left[K_{\bff, \bff} + \sigma_{noise}^{2} I\right]^{-1} \bfx, K_{\bar{\bff}, \bar{\bff}} - K_{\bar{\bff}, \bff} \left[K_{\bff, \bff} + \sigma_{noise}^{2} I\right]^{-1} K_{\bff, \bar{\bff}}\right).
+	\end{equation*}
+	\item Sea \(\bfu = \{u_{i}\}_{i=1}^{m}\) un conjunto de \(m\) variables latentes (u ocultas), que llamaremos variables inducidas o \emph{pseudo-outputs}, los cuales son valores del proceso. Asociamos a cada \(u_{i}\) un índice \(t_{u_{i}}\) que llamaremos \emph{pseudo-input}, de modo que \(f(t_{u_{i}}) = u_{i}\), y denotamos \(T_{\bfu}\) al conjunto de \emph{pseudo-inputs}.
+\end{itemize}
+
+La idea central de incluir las variables \(\bfu\) es para aproximar la distribución conjunta entre \(\bff\) y \(\bar{\bff}\), marginalizando con respecto a \(\bfu\) dada una distribución gaussiana a priori, es decir,
+\begin{align*}
+	p(\bff, \bar{\bff})	&= \int p(\bff, \bar{\bff}, \bfu) \dd{\bfu} = \int p(\bff, \bar{\bff} \mid \bfu) p(\bfu) \dd{\bfu}, \\
+	p(\bfu)				&= \calN(\mathbf{0}, K_{\bfu, \bfu}),
+\end{align*}
+donde \(K_{\bfu, \bfu} = k(T_{\bfu}, T_{\bfu})\). La aproximación se realiza con respecto a \(p(\bff, \bar{\bff} \mid \bfu)\), de modo de imponer una independencia condicional entre \(\bff\) y \(\bar{\bff}\) dado \(\bfu\), es decir
+\begin{equation*}
+p(\bff, \bar{\bff} \mid \bfu) \approx q(\bff \mid \bfu) q(\bar{\bff} \mid \bfu),
+\end{equation*}
+donde \(q(\bff \mid \bfu)\) es la distribución condicional inducida por \(\bfu\). Utilizando este supuesto, es posible escribir las distribuciones condicionales de forma
+\begin{align*}
+	p(\bff \mid \bfu)		&= \calN\left(K_{\bff, \bfu} K_{\bfu,\bfu}^{-1} \bfu, K_{\bff, \bff}-Q_{\bff, \bff}\right) \\
+	p(\bar{\bff} \mid \bfu)	&= \calN\left(K_{\bar{\bff}, \bfu} K_{\bfu, \bfu}^{-1} \bfu, K_{\bar{\bff}, \bar{\bff}} - Q_{\bar{\bff}, \bar{\bff}}\right),
+\end{align*}
+donde \(Q_{\bfa, \bfb} = K_{\bfa, \bfu} K_{\bfu, \bfu}^{-1} K_{\bfu, \bfb}\). Veamos a continuación diferentes aproximaciones que hacen diferentes supuestos sobre \(q\).
+
+\section{SoD: Subconjunto de Datos}
+
+El método más simple es escoger \(\bfu\) como subconjunto de \(\bff\) con \(m < n\). El problema de seleccionar un subconjunto es del tipo combinatorial, ya que la cantidad de combinaciones posibles es
+\[ \binom{n}{m} = \frac{n!}{(n-m)! m!}.\]
+Este método tiende a generar predicciones con gran varianza, ya que el subconjunto escogido no tendrá la información de los elementos no considerados.
+
+\section{SoR: Subconjunto de Regresores}
+
+En este caso, también conocido como en inglés como \emph{Deterministic Inducing Conditional}, se realiza una aproximación determinista (una delta de Dirac o una gaussiana de varianza cero) de la distribución condicional de \(\bff\) y \(\bar{\bff}\) con respecto a \(\bfu\), de modo que
+\begin{align*}
+	q_{\mathrm{SoR}}(\bff \mid \bfu)		&= \calN(K_{\bff, \bfu} K_{\bfu,\bfu}^{-1} \bfu, \mathbf{0}), \\
+	q_{\mathrm{SoR}}(\bar{\bff} \mid \bfu)	&= \calN(K_{\bar{\bff},\bfu} K_{\bfu, \bfu}^{-1} \bfu, \mathbf{0}), \\
+	q_{\mathrm{SoR}}(\bff, \bar{\bff})		&= \calN\left(\mathbf{0}, \begin{bmatrix}
+		Q_{\bff, \bff} & Q_{\bff, \bar{\bff}} \\
+		Q_{\bar{\bff}, \bff} & Q_{\bar{\bff}, \bar{\bff}}
+	\end{bmatrix}\right).
+\end{align*}
+Con estos supuestos, la distribución predictiva se calcula aproximando \(p(\bff, \bar{\bff}) \approx q_{\mathrm{SoR}}(\bff, \bar{\bff})\):
+\begin{align*}
+	p(\bar{\bff} \mid \bfx)					&= \int p(\bar{\bff}, \bff \mid \bfx) \dd{\bff} = \frac{1}{p(\bfx)} \int p(\bfx \mid \bff) p(\bff, \bar{\bff}) \dd{\bff} \approx q_{\mathrm{SoR}}(\bar{\bff} \mid \bfx), \\
+	q_{\mathrm{SoR}}(\bar{\bff} \mid \bfx)	&= \calN\left(Q_{\bar{\bff}, \bff} \left[Q_{\bff, \bff} + \sigma_n^2 I\right]^{-1} \bfx, Q_{\bar{\bff}, \bar{\bff}} - Q_{\bar{\bff}, \bff} \left[Q_{\bff, \bff} + \sigma_n^2 I\right]^{-1} Q_{\bff, \bar{\bff}}\right).
+\end{align*}
+Aplicando el lema de inversión de Woodbury en las expresiones anteriores, se obtiene que
+\begin{align*}
+	\left[ Q_{\bff, \bff} + \sigma_n^2 I\right]^{-1}	&= [K_{\bff, \bfu} K_{\bfu,\bfu}^{-1} K_{\bfu, \bff} + \sigma_n^2 I]^{-1} \\
+														&= \sigma_n^{-2} I - \sigma_{n}^{-4} K_{\bff, \bfu} [K_{\bfu, \bfu} + \sigma_n^{-2} K_{\bfu, \bff} K_{\bff, \bfu}]^{-1} K_{\bfu, \bff} \\
+														&= \sigma_n^{-2} \left[I - K_{\bff, \bfu} [\sigma_n^2 K_{\bfu, \bfu} + K_{\bfu, \bff} K_{\bff,\bfu}]^{-1} K_{\bfu, \bff}\right] \\
+	Q_{\bar{\bff}, \bff}\left[Q_{\bff, \bff} + \sigma_n^2 I\right]^{-1}	&= \sigma_n^{-2} K_{\bar{\bff}, \bfu} K_{\bfu, \bfu}^{-1} \left[I - K_{\bfu, \bff} K_{\bff,\bfu} [\sigma_n^2 K_{\bfu, \bfu} + K_{\bfu, \bff} K_{\bff, \bfu}]^{-1} \right] K_{\bfu, \bff} \\
+																		&= \sigma_n^{-2} K_{\bar{\bff}, \bfu} K_{\bfu, \bfu}^{-1} \left[I - I + \sigma_n^2 K_{\bfu, \bfu} [\sigma_n^2 K_{\bfu, \bfu} + K_{\bfu, \bff} K_{\bff, \bfu}]^{-1} \right] K_{\bfu, \bff} \\
+																		&= K_{\bar{\bff}, \bfu} [\sigma_n^2 K_{\bfu, \bfu} + K_{\bfu, \bff} K_{\bff, \bfu}]^{-1} K_{\bfu, \bff} \\
+																		&= K_{\bar{\bff}, \bfu} \left[\Sigma_{\bfu}^{\bff}\right]^{-1} K_{\bfu, \bff},
+\end{align*}
+donde \(\Sigma_{\bfu}^{\bff} = \sigma_n^2 K_{\bfu, \bfu} + K_{\bfu, \bff} K_{\bff, \bfu}\). Luego, la varianza tiene la forma
+\begin{align*}
+	Q_{\bar{\bff}, \bar{\bff}} - Q_{\bar{\bff}, \bff} [Q_{\bff, \bff} + \sigma_n^2 I]^{-1} Q_{\bff, \bar{\bff}}	&= K_{\bar{\bff}, \bfu} K_{\bfu, \bfu}^{-1} K_{\bfu, \bar{\bff}} - K_{\bar{\bff}, \bfu}\left[\Sigma_{\bfu}^{\bff}\right]^{-1} K_{\bfu, \bff} K_{\bff, \bfu} K_{\bfu, \bfu}^{-1} K_{\bfu, \bar{\bff}} \\
+	&= K_{\bar{\bff}, \bfu}\left[K_{\bfu, \bfu}^{-1} - \left[\Sigma_{\bfu}^{\bff}\right]^{-1} K_{\bfu, \bff} K_{\bff, \bfu} K_{\bfu, \bfu}^{-1}\right] K_{\bfu, \bar{\bff}} \\
+	&= K_{\bar{\bff}, \bfu}\left[\Sigma_{\bfu}^{\bff}\right]^{-1} [\Sigma_{\bfu}^{\bff} K_{\bfu,\bfu}^{-1} - K_{\bfu, \bff} K_{\bff, \bfu} K_{\bfu, \bfu}^{-1}] K_{\bfu, \bar{\bff}} \\
+	&= K_{\bar{\bff}, \bfu}\left[\Sigma_{\bfu}^{\bff}\right]^{-1} [\sigma_n^2 K_{\bfu, \bfu} K_{\bfu, \bfu}^{-1} + K_{\bfu, \bff} K_{\bff, \bfu} K_{\bfu, \bfu}^{-1}\\
+	&\qquad - K_{\bfu, \bff} K_{\bff, \bfu} K_{\bfu, \bfu}^{-1}] K_{\bfu, \bar{\bff}} \\
+	&= \sigma_n^2K_{\bar{\bff},\bfu}\left[ \Sigma_{\bfu}^{\bff}\right]^{-1}K_{\bfu, \bar{\bff}}
+\end{align*}
+por lo que la distribución predictiva es de la forma
+\begin{equation*}
+	q_{\mathrm{SoR}}(\bar{\bff} \mid \bfx) = \calN\left(K_{\bar{\bff}, \bfu} \left[\Sigma_{\bfu}^{\bff}\right]^{-1} K_{\bfu, \bff} \bfx, \sigma_n^2 K_{\bar{\bff}, \bfu} \left[\Sigma_{\bfu}^{\bff}\right]^{-1} K_{\bfu, \bar{\bff}}\right).
+\end{equation*}
+Una de las ventajas de esta aproximación es que el proceso resultante sigue siendo un GP.
+
+\begin{proposition}
+	La aproximación SoR es equivalente al GP con función de covarianza
+	\begin{equation*}
+		k_{\mathrm{SoR}}(t, \bar{t}) = k(t, T_{\bfu}) K_{\bfu, \bfu} k(T_{\bfu}, t).
+	\end{equation*}
+\end{proposition}
+
+\section{DTC: Entrenamiento Condicional Determinista}
+
+Este caso, también conocido como \emph{Projected Latent Variables} y \emph{Projected Process Approximation} en inglés, se basa en aproximar \(\bff\) desde \(\bfu\) en forma de proyección
+\begin{align*}
+	q_{\mathrm{DTC}}(\bff \mid \bfu)	&= \calN(K_{\bff, \bfu} K_{\bfu, \bfu}^{-1} \bfu, 0), \\
+	p(\bfx \mid \bff)					&\approx q_{\mathrm{DTC}}(\bfx \mid \bfu) = \calN(K_{\bff, \bfu} K_{\bfu, \bfu}^{-1} \bfu, \sigma_n^2 I),
+\end{align*}
+de modo que las distribuciones quedan de la forma
+\begin{align*}
+	q_{\mathrm{DTC}}(\bar{\bff} \mid \bfu)	&= p(\bar{\bff} \mid \bfu), \\
+	q_{\mathrm{DTC}}(\bff, \bar{\bff})		&= \calN\left(\mathbf{0}, \begin{bmatrix}
+		Q_{\bff, \bff} & Q_{\bff, \bar{\bff}} \\
+		Q_{\bar{\bff}, \bff} & K_{\bar{\bff}, \bar{\bff}}
+	\end{bmatrix}
+	\right) \\
+	q_{\mathrm{DTC}}(\bar{\bff} \mid \bfx)	&= \calN\left(Q_{\bar{\bff}, \bff} [Q_{\bff, \bff} + \sigma_n^2 I]^{-1} \bfx, K_{\bar{\bff}, \bar{\bff}} - Q_{\bar{\bff}, \bff}[Q_{\bff, \bff} + \sigma_n^2 I]^{-1} Q_{\bff, \bar{\bff}}\right) \\
+											&= \calN\left(K_{\bar{\bff}, \bfu} \left[\Sigma_{\bfu}^{\bff}\right]^{-1} K_{\bfu, \bff} \bfx, K_{\bar{\bff}, \bar{\bff}} - Q_{\bar{\bff}, \bar{\bff}} + \sigma_n^2 K_{\bar{\bff}, \bfu} \left[\Sigma_{\bfu}^{\bff}\right]^{-1} K_{\bfu, \bar{\bff}}\right).
+\end{align*}
+
+\begin{proposition}
+	Para los casos SoR y DTC se tiene que
+	\begin{align*}
+		\mean[q_{\mathrm{DTC}}(\bar{\bff} \mid \bfx)]		&= \mean[q_{\mathrm{SoR}}(\bar{\bff} \mid \bfx)],\\
+		\variance[q_{\mathrm{DTC}}(\bar{\bff} \mid \bfx)]	&\geq \variance[q_{\mathrm{SoR}}(\bar{\bff} \mid \bfx)].
+	\end{align*}
+\end{proposition}
+
+\begin{proposition}
+	La aproximación DTC no produce un GP, ya que como la covarianza de los datos de entrenamiento y los de regresión son calculadas de forma diferente, no es consistente.
+\end{proposition}
+
+\section{FITC: Entrenamiento Condicional Completamente Independiente}
+
+Este caso, también conocido como \emph{Sparse Pseudo-input Gaussian Processes (SPGP)} en inglés \cite{snelson2005sparse}, se basa en aproximar \(\bff\) desde \(\bfu\) de forma de proyección con covarianza
+
+\begin{align*}
+	q_{\mathrm{SPGP}} (\bff \mid \bfu)			&= \calN\left(K_{\bff, \bfu} K_{\bfu, \bfu}^{-1} \bfu, \diag\left[K_{\bff, \bff} - Q_{\bff, \bff}\right] \right) \\
+	p(\bfx \mid \bff)							&\approx q_{\mathrm{SPGP}} (\bfx \mid \bfu) = \calN\left(K_{\bff, \bfu} K_{\bfu, \bfu}^{-1} \bfu, \diag \left[K_{\bff, \bff} - Q_{\bff, \bff}\right] + \sigma_n^2 I\right) \\
+	q_{\mathrm{SPGP}} (\bar{\bff} \mid \bfx)	&= \calN\left( K_{\bar{\bff}, \bfu} \Sigma_{\bfu}^{-1} K_{\bfu, \bar{\bff}} \Lambda^{-1} \bfx, K_{\bar{\bff}, \bfu} \Sigma_{\bfu}^{-1} K_{\bfu, \bar{\bff}}\right) \\
+	\Sigma_{\bfu}								&= K_{\bfu, \bfu} - K_{\bfu, \bff} \Lambda^{-1} K_{\bff, \bfu} \\
+	\Lambda										&= \diag \left[K_{\bff, \bff} - Q_{\bff, \bff} + \sigma_n^2 I\right] \\
+	\variance\left[q_{\mathrm{SPGP}}(\bar{f}_{i} \mid \bfx)\right]	&= k_{\bar{f}_{i}, \bar{f}_{i}} - K_{\bar{f}_{i}, \bff} \left(K_{\bff, \bff}^{-1} - Q_{\bff, \bff}^{-1}\right) k_{\bff, \bar{f}_{i}}.
+\end{align*}
+
+La formulación FITC se basa en aproximar las distribuciones condicionales:
+\begin{align*}
+	q_{\mathrm{FITC}}(\bff \mid \bfu)		&= \prod_{i=1}^{n} p(f_{i} \mid \bfu) = \calN\left(K_{\bff, \bfu} K_{\bfu,\bfu}^{-1} \bfu, \diag\left[K_{\bff, \bff} - Q_{\bff, \bff}\right] \right),\\
+	q_{\mathrm{FITC}}(\bar{\bff} \mid \bfu)	&= p(\bar{\bff} \mid \bfu) = \calN\left(K_{\bar{\bff}, \bfu} K_{\bfu, \bfu}^{-1} \bfu, K_{\bar{\bff}, \bar{\bff}} - Q_{\bar{\bff}, \bar{\bff}}\right),
+\end{align*}
+quedando la distribución conjunta y la distribución predictiva como
+\begin{align*}
+	q_{\mathrm{FITC}}(\bff, \bar{\bff})	&= \calN\left(\mathbf{0}, \begin{bmatrix}
+		Q_{\bff, \bff} - \diag\left[Q_{\bff, \bff} - K_{\bff, \bff}\right] & Q_{\bff, \bar{\bff}} \\
+		Q_{\bar{\bff}, \bff} & K_{\bar{\bff}, \bar{\bff}}
+	\end{bmatrix}
+	\right), \\
+	q_{\mathrm{FITC}}(\bar{\bff} \mid \bfx)	&= \calN\left(Q_{\bar{\bff}, \bff} (Q_{\bff, \bff} + \Lambda)^{-1} \bfx, K_{\bar{\bff}, \bar{\bff}} - Q_{\bar{\bff}, \bff}(Q_{\bff, \bff} + \Lambda)^{-1} Q_{\bff, \bar{\bff}}\right) \\
+											&= \calN \left(K_{\bar{\bff}, \bfu} \Sigma_{\bfu} K_{\bfu, \bar{\bff}} \Lambda^{-1} \bfx, K_{\bar{\bff}, \bar{\bff}} - Q_{\bar{\bff}, \bar{\bff}} + K_{\bar{\bff}, \bfu} \Sigma_{\bfu} K_{\bfu, \bar{\bff}}\right), \\
+	\Sigma_{\bfu}							&= \left(K_{\bfu, \bfu} - K_{\bfu, \bff} \Lambda^{-1} K_{\bff, \bfu}\right)^{-1} \\
+	\Lambda 								&= \diag\left[K_{\bff, \bff} - Q_{\bff, \bff} + \sigma_n^2 I\right].
+\end{align*}
+
+\begin{proposition}
+	La complejidad computacional de entrenamiento de SoR, DTC y FITC es \(O(m^{2} n)\).
+\end{proposition}
+
+\begin{definition}
+	La aproximación FIC (\emph{Fully Independent Conditional} en inglés) asume la misma independencia de \(\bff\) a \(\bar{\bff}\), quedando una distribución conjunta
+	\begin{equation*}
+		q_{\mathrm{FIC}}(\bff, \bar{\bff}) = \left(\mathbf{0}, \begin{bmatrix}
+			Q_{\bff, \bff} - \diag\left[Q_{\bff, \bff} - K_{\bff, \bff}\right] & Q_{\bff, \bar{\bff}} \\
+			Q_{\bar{\bff}, \bff} & Q_{\bar{\bff}, \bar{\bff}} - \diag\left[Q_{\bar{\bff}, \bar{\bff}} - K_{\bar{\bff}, \bar{\bff}}\right]
+		\end{bmatrix}
+	\right).
+	\end{equation*}
+\end{definition}
+
+\begin{proposition}
+	La aproximación FIC es equivalente al GP con función de covarianza
+	\begin{equation*}
+		k_{\mathrm{FIC}}(t, \bar{t}) = k_{\mathrm{SoR}}(t, \bar{t}) + \delta_{x, \bar{t}} [k(t, \bar{t}) - k_{\mathrm{SoR}}(t, \bar{t})].
+	\end{equation*}
+\end{proposition}
+
+\section{PITC: Entrenamiento Condicional Parcialmente Independiente}
+
+El caso de PITC, también conocido como \emph{Bayesian Committe Machine (BCM)} en inglés, se basa en aproximar \(\bff\) desde \(\bfu\) en forma de proyección con covarianza, en donde la distribución condicional de los datos de entrenamiento usa una matriz de covarianza diagonal en bloque, formada por particiones \(\bff_{I_{1}}, \dotsc, \bff_{I_{k}}\).
+
+La distribución queda de la siguiente forma:
+\begin{align*}
+	q_{\mathrm{PITC}}(\bff \mid \bfu)		&= \calN\left( K_{\bff, \bfu} K_{\bfu,\bfu}^{-1} \bfu, \blockdiag[K_{\bff, \bff} - Q_{\bff, \bff}]\right) \\
+	q_{\mathrm{PITC}}(\bar{\bff} \mid \bfu)	&= p(\bar{\bff} \mid \bfu) = \calN \left(K_{\bar{\bff},\bfu} K_{\bfu, \bfu}^{-1} \bfu, \blockdiag[K_{\bar{\bff}, \bar{\bff}} - Q_{\bar{\bff}, \bar{\bff}}]\right) \\
+	q_{\mathrm{PITC}}(\bff, \bar{\bff})		&= \calN\left(\mathbf{0}, \begin{bmatrix}
+		Q_{\bff, \bff} - \blockdiag\left[ Q_{\bff, \bff} - K_{\bff, \bff}\right] & Q_{\bff, \bar{\bff}} \\
+		Q_{\bar{\bff}, \bff} & K_{\bar{\bff}, \bar{\bff}}
+	\end{bmatrix}
+	\right),
+\end{align*}
+con una distribución predictiva de la forma similar que FITC, modificando \(\Lambda\):
+\begin{align*}
+	q_{\mathrm{PITC}}(\bar{\bff} \mid \bfx)	&= \calN\left(Q_{\bar{\bff}, \bff}(Q_{\bff,\bff} + \Lambda)^{-1}\bfx, K_{\bar{\bff}, \bar{\bff}} - Q_{\bar{\bff}, \bff}(Q_{\bff, \bff} + \Lambda)^{-1}Q_{\bff, \bar{\bff}}\right) \\
+											&= \calN\left(K_{\bar{\bff}, \bfu} \Sigma K_{\bfu, \bar{\bff}}\Lambda^{-1}\bfx, K_{\bar{\bff}, \bar{\bff}} - Q_{\bar{\bff}, \bar{\bff}} + K_{\bar{\bff}, \bfu} \Sigma K_{\bfu, \bar{\bff}}\right), \\
+	\Lambda									&= \blockdiag\left[K_{\bff, \bff} - Q_{\bff, \bff} + \sigma_n^2 I\right], \\
+	\Sigma									&= \left(K_{\bfu, \bfu} - K_{\bfu, \bff} \Lambda^{-1} K_{\bff, \bfu}\right)^{-1}.
+\end{align*}
+
+\begin{proposition}
+	La aproximación PITC no es un GP.
+\end{proposition}
+
+A continuación hay un cuadro resumen de los diferentes métodos propuestos.
+\begin{table}[h]
+	\centering
+	\begin{tabular}{lcccc}
+		\hline
+		Método	& \(q(\bff_{\ast} \mid \bfu)\)	& \(q(\bff \mid \bfu)\)	& coviaranza conjunta del prior	& ¿GP?\\
+		\hline
+		GP		& exacta						& exacta				& \(\begin{bmatrix} K_{\bff, \bff} & K_{\bff, \ast}\\ K_{\ast, \bff} & K_{\ast, \ast} \end{bmatrix}\)	& \checkmark\\
+		SoR		& determ.						& determ.				& \(\begin{bmatrix} Q_{\bff, \bff} & Q_{\bff, \ast}\\ Q_{\ast, \bff} & Q_{\ast, \ast} \end{bmatrix}\)	& \checkmark\\
+		DTC		& exacta						& determ.				& \(\begin{bmatrix} Q_{\bff, \bff} & Q_{\bff, \ast}\\ Q_{\ast, \bff} & K_{\ast, \ast} \end{bmatrix}\)	& \\
+		FITC	& (exacta)						& indep.				& \(\begin{bmatrix} Q_{\bff, \bff}-\diag[Q_{\bff, \bff}-K_{\bff, \bff}] & Q_{\bff, \ast}\\ Q_{\ast, \bff} & K_{\ast, \ast} \end{bmatrix}\)	& (\checkmark)\\
+		PITC	& exacta						& parcialmente indep.	& \(\begin{bmatrix} Q_{\bff, \bff}-\blockdiag[Q_{\bff, \bff}-K_{\bff, \bff}] & Q_{\bff, \ast}\\ Q_{\ast, \bff} & K_{\ast, \ast} \end{bmatrix}\)	& \\
+	\end{tabular}
+\end{table}
+
+
+\begin{proposition}
+	Las complejidades computacionales de almacenamiento, entrenamiento, predicción de la media y de la varianza de SoD son menores que las de SoR y DTC (que son idénticas), mientras que FITC, FIC y PITC coinciden con las mayores complejidades.
+\end{proposition}
+
+\begin{table}[h]
+	\centering
+	\begin{tabular}{|l|c|c|c|c|}
+		\hline
+		Método	& Memoria		& Inicialización	& Media		& Varianza\\
+		\hline
+		SoD		& \(O(m^2)\)	& \(O(m^3)\)		& \(O(m)\)	& \(O(m^2)\)\\
+		SoR		& \(O(mn)\)		& \(O(m^2 n)\)		& \(O(m)\)	& \(O(m^2)\)\\
+		DTC		& \(O(mn)\)		& \(O(m^2 n)\)		& \(O(m)\)	& \(O(m^2)\)\\
+		PITC	& \(O(mn)\)		& 					& \(O(mn)\)	& \(O(mn)\)\\
+		\hline
+	\end{tabular}
+\end{table}
+
+\section{Transducción y Aumento}
+
+Se dice que una transducción ocurre si la distribución predictiva depende de los tests de \emph{input}. Se tiene que en los GP exactos no ocurre transducción, por las reglas de marginalización y condicionalidad. Decimos que un aumento ocurre si la distribución predictiva de un caso de prueba (\emph{test case}) depende de los tests de \emph{input}. Un aumento no puede ocurrir en un GP no degenerado (en \emph{test inputs} y \emph{learning inputs)}. Con estas definiciones podemos definir una aproximación variacional aumentada. Veamos el caso de SoR.
+
+\begin{definition}
+	El SoR aumentado (\emph{augmented SoR} en inglés) considera la aproximación con distribución conjunta
+	\begin{equation*}
+	q_{\mathrm{ASoR}}(\bar{\bff}, \bff) = \int q_{\mathrm{SoR}}(\bff \mid \bar{\bff}, \bfu) p(\bar{\bff}, \bfu) \dd{\bfu}.
+	\end{equation*}
+\end{definition}
+
+\begin{proposition}
+	El SoR aumentado es equivalente al DTC aumentado (ADTC), es decir,
+	\begin{align*}
+		q_{ADTC}(\bar{\bff}, \bff)	&= \int q_{\mathrm{DTC}}(\bff \mid \bar{\bff}, \bfu) p(\bar{\bff}, \bfu) \dd{\bfu} \\
+									&= \int q_{\mathrm{SoR}}(\bff \mid \bar{\bff}, \bfu) p(\bar{\bff}, \bfu) \dd{\bfu} \\
+									&= q_{\mathrm{ASoR}}(\bar{\bff}, \bff).
+	\end{align*}
+\end{proposition}
+
+Al hacer un aumento, la media posterior se mantiene igual que la aproximación variacional original, pero la varianza predictiva aumenta.
+
+\begin{proposition}
+	Las medias y varianzas de SoR, DTC, y ASoR se comportan como sigue:
+	\begin{align*}
+		\mean\left[q_{\mathrm{SoR}}(\bar{\bff} \mid \bfx) \right]		&= \mean \left[q_{\mathrm{DTC}}(\bar{\bff} \mid \bfx) \right] = \mean\left[q_{\mathrm{ASoR}}(\bar{\bff} \mid \bfx) \right],\\
+		\variance\left[q_{\mathrm{SoR}}(\bar{\bff} \mid \bfx) \right]	&\leq \variance\left[q_{\mathrm{DTC}}(\bar{\bff} \mid \bfx) \right] \leq \variance\left[q_{\mathrm{ASoR}}(\bar{\bff} \mid \bfx) \right].
+	\end{align*}
+\end{proposition}
+
+\section{Aprendizaje de las Variables Inducidas}
+
+\comment{agregar ref a titsias??}
+En un enfoque completamente bayesiano, para entrenar las variables latentes \(T_{\bfu}\) es necesario definir una distribución prior \(p(T_{\bfu})\). Otra forma es maximizando la verosimilitud marginal (conocida como evidencia) de \(\bfx\) con respecto a las variables \(T_{\bfu}\), es decir,
+\begin{align*}
+	q(\bfx \mid T_{\bfu})	&= \iint p(\bfx \mid \bff) q(\bff \mid \bfu) p(\bfu \mid T_{\bfu}) \dd{\bfu} \dd{\bff} \\
+							&= \iint p(\bfx \mid \bff) q(\bff \mid T_{\bfu}) \dd{\bfu} \dd{\bff} \\
+							&= \calN(\mathbf{0}, Q_{\bff, \bff} + \Lambda).
+\end{align*}
+
+\begin{proposition}
+	La log-verosimilitud marginal de cada aproximación queda de la forma
+	\begin{align*}
+		\log q(\bfx \mid T_{\bfu})	&= -\frac{1}{2} \log \vert Q_{\bff, \bff} + \Lambda \vert - \frac{1}{2} \bfx^{\top} (Q_{\bff, \bff} + \Lambda)^{-1} \bfx - \frac{n}{2} \log(2\pi), \\
+		\Lambda_{\mathrm{SoR}}		&= \Lambda_{\mathrm{DTC}} = \sigma_n^2 I, \\
+		\Lambda_{\mathrm{FITC}}		&= \diag\left[K_{\bff, \bff} - Q_{\bff, \bff}\right] + \sigma_n^2 I, \\
+		\Lambda_{\mathrm{PITC}}		&= \blockdiag\left[K_{\bff, \bff} - Q_{\bff, \bff}\right] + \sigma_n^2 I.
+	\end{align*}
+\end{proposition}
+
+\begin{proposition}
+	El costo computacional de calcular la log-verosimilitud marginal es \(O(nm^{2})\) para todas las aproximaciones, y la derivada parcial con respecto a \(t_{\bfu, i}\) tiene costo \(O(nm)\), resultando en una complejidad \(O(dnm)\) para el gradiente completo.
+\end{proposition}
+
+Para entrenar las variables \(T_{\bfu}\) basta con maximizar la log-verosimilitud marginal, y simultáneamente entrenar los hiperparámetros. Los supuestos de independencia son importantes para la búsqueda de \emph{pseudo-inputs} por gradiente, ya que estos producen que \(\Lambda\) tenga la información de la variabilidad de cada punto, obteniendo resultados similares a la distribución inicial.
+
+Una opción para bajar el costo computacional de la log-verosimilitud marginal a \(O(m^{3})\) es utilizar inferencia variacional estocástica \cite{23}, y en lugar de marginalizar las variables inducidas y optimizar la log-verosimilitud marginal, se construye una cota variacional inferior a través de la Divergencia de Kullback-Leibler, la cual es optimizada.
+
+En \cite{20} se propone un modelo que generaliza los supuestos de todos los métodos anteriores, ya que en vez de un único conjunto \(\bfu\) de variables inducidas existen \(k\) conjuntos \(\bfu_{i}\), con supuestos de independencia condicionales de forma de árbol (o cadena). Esto resulta en una distribución a priori y posteriori de la forma
+\begin{align*}
+	q(\bfu)				&= \prod_{i=1}^{k} q(\bfu_{i} \mid \parents(\bfu_{i})) \\
+	q(\bff \mid \bfu)	&= \prod_{i=1}^{k} q(\bff_{i} \mid \bfu_{i}),
+\end{align*}
+donde \(\parents(\bfu)\) denota al conjunto de padres de \(\bfu\), si vemos el modelo como un grafo.
+
+\comment{mas allá de describir los métodos falta discusión, quizas mostrar experimentos, tiempos de ejecución quizas? o visualización tanto del kernel o de las variables inducidas}
+
+\comment{parrafo: concluyendo los metodos, mencionar cada uno brevemente y sus diferencias y similitudes, agregar referencias a otros textos complementarios}

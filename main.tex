@@ -1,0 +1,235 @@
+%\documentclass[upright, contnum]{umemoria}
+\documentclass[12pt, a4paper]{book}
+
+\usepackage[utf8]{inputenc} % encoding
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage[top=2cm, left=3cm, bottom=2cm, right=2cm, paper=letterpaper]{geometry} % márgenes
+\usepackage{mathtools, amssymb, amsthm, graphicx} % Varios
+\usepackage[spanish, es-nolists, es-lcroman]{babel} % Lenguaje
+\usepackage[pdfpagelabels]{hyperref} % Links y numeracion del PDF
+
+\usepackage{multirow, bigstrut}
+\usepackage{physics} % for differentials
+%\input{preamble}
+%\usepackage{natbib} % citations
+%\usepackage{url}            % para escribir URL de forma simple CHECKED
+\usepackage{booktabs}       % professional-quality tables CHECKED
+\usepackage{algpseudocode}
+%\usepackage{subfig} NOT USED?
+%\usepackage[numbers,sort&compress]{natbib}
+%\usepackage{appendix}
+%\usepackage{mathtools}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+%\usepackage{pgfplotstable}
+%\usepackage{afterpage}
+%\usepackage{float}
+%\usepackage{wrapfig}
+%\usepackage[nottoc,notlot,notlof]{tocbibind}
+\usetikzlibrary{bayesnet, tikzmark, babel, arrows, positioning, chains, fit, shapes, calc}
+
+\graphicspath{{imagenes/}}
+
+% Theorem definitons
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definición}[section]
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Teorema}[section]
+\newtheorem{assumption}[theorem]{Suposición}
+\newtheorem{corollary}[theorem]{Corolario}
+\newtheorem{lemma}[theorem]{Lema}
+\newtheorem{proposition}[theorem]{Proposición}
+
+\newtheorem*{importantconvention}%[theorem]
+{Important Convention}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Observación}
+\newtheorem{example}[theorem]{Ejemplo}
+\newtheorem{conjecture}[theorem]{Conjetura}
+\newtheorem{question}[theorem]{Pregunta}
+
+%\providecommand{\red}[1]{\textcolor{red}{{\bf [#1]}}}
+\providecommand{\red}[1]{\textcolor{red}{#1}}
+\providecommand{\blue}[1]{\textcolor{blue}{#1}}
+\providecommand{\keywords}[1]{\textcolor{black}{{\bf #1}}}
+\DeclareFontFamily{OT1}{pzc}{}
+\DeclareFontShape{OT1}{pzc}{m}{it}{<-> s * [1.300] pzcmi7t}{}
+\DeclareMathAlphabet{\mathpzc}{OT1}{pzc}{m}{it}
+\newcommand\blankpage{%
+	\null
+	\thispagestyle{empty}%
+	\addtocounter{page}{-1}%
+	\newpage}
+%\newcommand{\arrow}[1]{\overrightarrow{#1}}
+%\newcommand{\ft}[1]{\widehat{ #1 }}
+%\newcommand{\conj}[1]{\overline{#1}}
+%\newcommand{\overbar}[1]{\mkern 1.5mu\overline{\mkern-1.5mu#1\mkern-1.5mu}\mkern 1.5mu}
+
+\newcommand{\eps}{\varepsilon}
+\renewcommand{\eps}{\varepsilon}
+\renewcommand{\epsilon}{\varepsilon}
+\renewcommand{\tikzmark}[1]{\tikz[overlay, remember picture] \node (#1) {};}
+
+% operators
+\DeclareMathOperator{\supp}{supp}
+\DeclareMathOperator*{\argmin}{\arg\min}
+\DeclareMathOperator*{\argmax}{\arg\max}
+%\DeclareMathOperator{\Tr}{Tr} % already defined by physics package
+%\DeclareMathOperator{\tr}{tr} % already defined by physics package
+\DeclareMathOperator{\arcsinh}{arcsinh}
+\DeclareMathOperator{\asinh}{asinh}
+\DeclareMathOperator{\chol}{chol}
+\DeclareMathOperator{\Be}{Be}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator{\variance}{Var}
+\DeclareMathOperator{\cov}{Cov}
+\DeclareMathOperator{\KL}{KL}
+\DeclareMathOperator{\GP}{\mathcal{GP}}
+\DeclareMathOperator{\WGP}{\mathcal{WGP}}
+\DeclareMathOperator{\MOGP}{\mathcal{MOGP}}
+\DeclareMathOperator{\CN}{\mathcal{CN}}
+\DeclareMathOperator{\CP}{CP}
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\blockdiag}{blockdiag}
+\DeclareMathOperator{\realpart}{Re}
+\DeclareMathOperator{\imagpart}{Im}
+\DeclareMathOperator{\median}{mediana}
+\DeclareMathOperator{\mode}{moda}
+\DeclareMathOperator{\Beta}{Beta}
+\DeclareMathOperator{\Betaloc}{BetaLoc}
+\DeclareMathOperator{\relu}{ReLU}
+% blackboard notation (sets, probability, expectation, etc.)
+\newcommand{\complex}{\mathbb{C}}
+\newcommand{\mean}{\mathbb{E}} % \E
+\newcommand{\naturals}{\mathbb{N}}
+\newcommand{\prob}{\mathbb{P}}
+\newcommand{\probQ}{\mathbb{Q}}
+\newcommand{\reals}{\mathbb{R}}
+
+% math bold commands
+\newcommand{\bfa}{\mathbf{a}}
+\newcommand{\bfb}{\mathbf{b}}
+\newcommand{\bff}{\mathbf{f}}
+\newcommand{\bfh}{\mathbf{h}}
+\newcommand{\bfk}{\mathbf{k}} % \k
+\newcommand{\bfm}{\mathbf{m}}
+\newcommand{\bfp}{\mathbf{p}}
+\newcommand{\bfr}{\mathbf{r}}
+\newcommand{\bfs}{\mathbf{s}}
+\newcommand{\bfu}{\mathbf{u}}
+\newcommand{\bfU}{\mathbf{U}}
+\newcommand{\bft}{\mathbf{t}} % \t
+\newcommand{\bfv}{\mathbf{v}}
+\newcommand{\bfx}{\mathbf{x}} % \x
+\newcommand{\bfy}{\mathbf{y}} % \y
+\newcommand{\bfz}{\mathbf{z}}
+\newcommand{\bfto}{\bar{\bft}} % \tto
+\newcommand{\bfxo}{\bar{\bfx}} % \xo
+\newcommand{\bfyo}{\bar{\bfy}} % \yo
+\newcommand{\bfalpha}{\boldsymbol{\alpha}}
+\newcommand{\bfgamma}{\boldsymbol{\gamma}}
+\newcommand{\bfeta}{\boldsymbol{\eta}}
+\newcommand{\bftau}{\boldsymbol{\tau}}
+\newcommand{\bfphi}{\boldsymbol{\phi}}
+
+% math calligraphic commands
+\newcommand{\calB}{\mathcal{B}}
+\newcommand{\calC}{\mathcal{C}}
+\newcommand{\calD}{\mathcal{D}}
+\newcommand{\calF}{\mathcal{F}}
+\newcommand{\calH}{\mathcal{H}}
+\newcommand{\calI}{\mathcal{I}}
+\newcommand{\calL}{\mathcal{L}} % \L
+\newcommand{\calM}{\mathcal{M}} % \M
+\newcommand{\calN}{\mathcal{N}} % \N
+\newcommand{\calP}{\mathcal{P}} % \P
+\newcommand{\calT}{\mathcal{T}} % \T
+\newcommand{\calU}{\mathcal{U}}
+\newcommand{\calX}{\mathcal{X}} % \X
+\newcommand{\calY}{\mathcal{Y}}
+
+% miscellanea
+\newcommand{\no}{\bar{n}}
+\newcommand{\parents}{\mathrm{Pa}}
+\newcommand{\lv}{\left\vert} 
+\newcommand{\rv}{\right\vert} 
+\newcommand{\lV}{\left\Vert} 
+\newcommand{\rV}{\right\Vert} 
+\newcommand{\bfxs}{\lVert \bfx \rVert_1}
+\newcommand{\bfys}{\lVert \bfy \rVert_1}
+\newcommand{\bfxn}{\lVert \bfx \rVert_2}
+\newcommand{\bfyn}{\lVert \bfy \rVert_2}
+\newcommand{\bfxon}{\lVert \bfxo \rVert_2}
+\newcommand{\bfyon}{\lVert \bfyo \rVert_2}
+\newcommand{\comment}[1]{\textcolor{red}{\textbf{#1}}}
+
+
+%fix for the oneside argument
+\makeatletter
+\g@addto@macro\titlepage{\pagenumbering{Alph}}
+\g@addto@macro\endtitlepage{\pagenumbering{roman}}
+\makeatother
+
+\makeatletter
+\newenvironment{chapquote}[2][2em]
+{\setlength{\@tempdima}{#1}%
+	\def\chapquote@author{#2}%
+	\parshape 1 \@tempdima \dimexpr\textwidth-2\@tempdima\relax%
+	\itshape}
+{\par\normalfont\hfill--\ \chapquote@author\hspace*{\@tempdima}\par\bigskip}
+\makeatother
+
+\title{Procesos Estocásticos, Gaussianos y No Gaussianos Aplicados al Aprendizaje de Máquinas y al Marketing}
+\author{Gonzalo Andrés Ríos Díaz\\ Ignacio Alejandro Correa Falconi}
+\date{2023}
+
+\allowdisplaybreaks
+
+\makeatletter
+\let\Hy@linktoc\Hy@linktoc@none
+\makeatother
+
+% \includeonly{framework}
+
+\begin{document}
+	
+	\frontmatter
+	
+	\maketitle
+	
+	\include{intro}
+	
+	\mainmatter
+	
+	\tableofcontents
+	% \include{notation}
+	\include{framework}
+	\include{training}
+	\include{gp}
+	\include{kernel}
+	\include{sparse}
+	\include{multioutput}
+	\include{wgp}
+	\include{elliptical}
+	\include{mmm}
+	\include{optimization}
+	\include{control}
+	\include{constraints}
+	%\include{bibliography_tex}
+	
+	%\input{glosario.tex} % opcional
+	%\newpage
+	%\phantomsection 
+	%\addcontentsline{toc}{chapter}{\protect\numberline{}Bibliography}
+	\bibliographystyle{plain}
+	\bibliography{bibliography}
+	%\listoftables % opcional
+	\listoffigures % opcional
+	%\input{anexo_apendices.tex} % opcionales
+	
+\end{document}

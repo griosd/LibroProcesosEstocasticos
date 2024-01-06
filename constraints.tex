@@ -1,0 +1,393 @@
+%!TEX root = main.tex
+
+\section{Problemas con Restricciones}
+
+En las secciones anteriores mencionamos que para resolver el problema de optimización que obtuvimos debemos utilizar algún método iterativo, tal como el método del gradiente o de Newton. Lo que no hemos mencionado hasta ahora es que la solución debe cumplir las restricciones de la forma \(\bfu \in U\), por lo que debemos utilizar técnicas de optimización con restricciones. Vamos a ver distintos tipos de restricciones y cómo replantear los problemas para poder utilizar los métodos estudiados.
+
+\subsection{Restricciones de Igualdad}
+
+Un problema con restricciones de igualdad (PRI) es un problema de optimización de la siguiente forma:
+\begin{align*}
+					& \min f(x) \\
+	\text{s.a. }	& h(x) = \mathbf{0},
+\end{align*}
+donde \(f : \reals^{n} \to \reals\) y \(h : \reals^{n} \to \reals^{m}\).
+
+\begin{definition}
+	Dado un PRI, se define su lagrangiano como
+	\begin{align*}
+		L : \reals^n \times \reals^m	&\to \reals\\
+		(x, \lambda)					&\mapsto L(x, \lambda) = f(x) + \lambda^{\top} h(x).
+	\end{align*}
+\end{definition}
+
+\begin{proposition}
+	Si \(x^{\ast}\) es un mínimo local de un PRI, entonces para todo \(\lambda \in \reals^m\) se tiene que \(f(x^{\ast}) = L(x^{\ast}, \lambda)\).
+\end{proposition}
+
+\begin{proposition}
+	Si \(x^{\ast}\) es un mínimo local de un PRI, entonces existe un \(\lambda^{\ast} \in \reals^m\) tal que \(\nabla_{x} L(x^{\ast}, \lambda^{\ast}) = 0\).
+\end{proposition}
+
+\begin{proposition}
+	Si \(x^{\ast}\) es tal que \(h(x^{\ast}) = \mathbf{0}\) y existe un \(\lambda^{\ast} \in \reals^m\) tal que para todo \(z \neq \mathbf{0}\) se tiene que (i) \(\nabla h(x^{\ast})^\top z = 0\), (ii) \(\nabla_{x} L(x^{\ast}, \lambda^{\ast}) = \mathbf{0}\), y (iii) \(z^{\top} \nabla_{xx} L(x^{\ast}, \lambda^{\ast}) z > 0\), entonces \(x^{\ast}\) es un mínimo local del PRI.
+\end{proposition}
+
+\begin{definition}
+	Dado un PRI, se define su lagrangiano aumentado como
+	\[L_{c}(x, \lambda) = f(x) + \lambda^{\top} h(x) + c \frac{\lvert h(x)\rvert^2}{2}.\]
+\end{definition}
+
+\begin{proposition}
+	Si \(x^{\ast}\) es un mínimo local de un PRI, entonces para todo par \(\lambda, c\) se tiene que \(f(x^{\ast}) = L_{c}(x^{\ast}, \lambda)\).
+\end{proposition}
+
+\begin{proposition}
+	Existe un valor \(\bar{c} > 0\) tal que para todo \(c \geq \bar{c}\) se cumple que
+	\begin{align*}
+		\nabla_{x} L_{c}(x^{\ast}, \lambda^{\ast})	&= \nabla_{x} L(x^{\ast}, \lambda^{\ast}) = 0,\\
+		\nabla_{xx} L_{c}(x^{\ast}, \lambda^{\ast})	&= \nabla_{xx}L(x^{\ast}, \lambda^{\ast}) + c\nabla h(x^{\ast}) \nabla h(x^{\ast})^{\top} > 0.
+	\end{align*}
+\end{proposition}
+El resultado anterior nos permite decir que para un \(c\) lo suficientemente grande, resolver el problema de optimización sin restricciones \(\min L_{c}(x^{\ast}, \lambda^{\ast})\) es equivalente a resolver el PRI.
+
+\subsection{Restricciones de Desigualdad}
+
+Consideremos el caso de un problema no lineal (PNL), en donde el problema de optimización tiene restricciones de igualdad y restricciones de desigualdad, es decir,
+\begin{align*}
+					&\min f(x) \\
+	\text{s.a. }	& h(x) = \mathbf{0}, \\
+					& g(x) \leq \mathbf{0}.
+\end{align*}
+donde \(f : \reals^n \to \reals\), \(h : \reals^n \to \reals^m\) y \(g : \reals^n \to \reals^r\).
+
+\begin{definition}
+	Dado un PNL, se define su lagrangiano como
+	\begin{align*}
+		L : \reals^n \times \reals^m \times \reals^r	&\to \reals\\
+		(x, \lambda, \mu)								&\mapsto L(x, \lambda) = f(x) + \lambda^{\top} h(x) + \mu^{\top} g(x).
+	\end{align*}
+\end{definition}
+
+\begin{proposition}
+	\label{prop:PNL_multipliers}
+	Si \(x^{\ast}\) es un mínimo local de PNL, entonces existen \(\lambda^{\ast} \in \reals^m\) y \(\mu^{\ast} \in \reals^r\) tales que
+	\begin{align*}
+		\nabla_{x} L(x^{\ast}, \lambda^{\ast}, \mu^{\ast})	&= 0,\\
+		\mu_{j}^{\ast}										&\geq 0,\\
+		\mu_{j}^{\ast} g_{j}(x^{\ast})						&=0, \text{ para todo } j.
+	\end{align*}
+	Además, para todo \(z\) tal que \(\nabla h(x^{\ast})^{\top} z = 0\) y \(\nabla g_{j}(x^{\ast})^{\top} z = 0\) con \(j \in A(x^{\ast}) \coloneqq \{j \mid g_{j}(x^{\ast}) = 0\}\), se cumple que \(z^{\top} \nabla_{xx} L(x^{\ast}, \lambda^{\ast}) z \geq 0\).
+\end{proposition}
+
+Como se puede ver, el caso de las desigualdades es más complejo desde el punto de vista teórico, ya que debemos discriminar cuáles desigualdades son activas (aquellas donde \(g_{j}(x^{\ast}) = 0\)) y cuáles no lo son (aquellas donde \(g_{j}(x^{\ast}) < 0\)). Ahora bien, podemos convertir un PLN en un PRI (denotado PLN-a-PRI) agregando una variable auxiliar por cada \(g_{j}(x)\). Replanteamos el problema original de la siguiente forma:
+\begin{align*}
+					& \min \bar{f}(x,z) \coloneqq f(x) \\
+	\text{s.a. }	& \bar{h}(x,z) \coloneqq h(x) = 0, \\
+					& \bar{g}_{j}(x, z) \coloneqq g_{j}(x) + z_{j}^{2} = 0.
+\end{align*}
+
+\begin{proposition}
+	\(x^{\ast}\) es un mínimo local de un PNL si y solo si \((x^{\ast}, [-g_{j}(x^{\ast})]_{j}^{\frac{1}{2}})\) es un mínimo local de PLN-a-PRI.
+\end{proposition}
+
+De esta forma, se puede utilizar el mismo resultado que en el caso un PRI para un PLN. El problema de esta transformación es que aumenta la cantidad de variables de forma considerable, dificultando la resolución del problema. Veamos algunos casos particulares en donde se puede proceder de una forma más eficiente.
+
+\subsection{Restricciones Simples}
+
+Supongamos que las únicas restricciones que tenemos son del estilo \(x \geq 0\). Este problema de restricciones simples (PRS) tiene la siguiente forma:
+\begin{align*}
+					& \min f(x) \\
+	\text{s.a. }	& x \geq 0.
+\end{align*}
+
+En este caso, tenemos que \(g_{j}(x) = -x_{j}\) y que \(L(x, \mu) = f(x) - \mu^{\top} x\). Entonces, por la proposición \ref{prop:PNL_multipliers} se cumple que si \(x^{\ast}\) es un mínimo local de un PRS entonces existe un \(\mu^{\ast}\) tal que para todo \(j\) se tiene que  \(\mu_{j}^{\ast} \geq 0\), \(\mu_{j}^{\ast}x_{j}^{\ast} = 0\), y \(\pdv*{f(x^{\ast})}{x_{j}} = \mu_{j}^{\ast}\). Esto implica que
+\[ \pdv{f(x^\ast)}{x_j} \begin{dcases*}
+	= 0,	& si \(x^\ast_j > 0\),\\
+	\geq 0,	& si \(x^\ast_j = 0\).
+\end{dcases*} \]
+
+Dado un valor \(\alpha > 0\), en el primer caso se cumple que \(x_{j}^{\ast} - \alpha\pdv*{f(x^{\ast})}{x_{j}} = x_{j}^{\ast} > 0\), y en el segundo caso se cumple que \(x_{j}^{\ast} - \alpha \pdv*{f(x^{\ast})}{x_{j}} = -\alpha \pdv*{f(x^{\ast})}{x_{j}} \leq 0 = x_{j}^{\ast}\). Si definimos
+\begin{equation*}
+	[z]^+ = \begin{bmatrix}
+		\max\{0, z_{1}\} \\
+		\vdots \\
+		\max\{0, z_n\}
+	\end{bmatrix},
+\end{equation*}
+entonces podemos afirmar que \(x^{\ast} = [x^{\ast} - \alpha \nabla f(x^{\ast})]^{+}\) para todo \(\alpha > 0\). Esta ecuación nos motiva a extender los métodos de optimización en donde la iteración toma forma
+\[x_{k+1} \gets [x_{k} - \alpha_{k} \nabla f(x_{k})]^{+},\]
+o de forma más general,
+\[x_{k+1} \gets [x_{k} - \alpha_{k} D_{k} \nabla f(x_{k})]^{+}.\]
+La búsqueda del paso \(\alpha_{k}\) se realiza también considerando esta modificación, es decir,
+\[\alpha_{k} = \argmin x_{k}(\alpha) = [x_{k} - \alpha D_{k} \nabla f(x_{k})]^{+}.\]
+
+\subsection{Restricciones de Intervalo}
+
+Consideremos ahora un caso más general de restricciones sobre las variables, en donde tenemos una cota inferior \(a\) y una cota superior \(b\). Los valores \(-\infty \) y \(\infty \) son válidos, respectivamente. El problema de cota superior e inferior (CSI) se plantea de la siguiente forma:
+\begin{align*}
+					& \min f(x) \\
+	\text{s.a. }	& a \leq x \leq b.
+\end{align*}
+Si definimos \(g_{j}^{a}(x) = a_{j} - x_{j}\) y \(g_{j}^{b}(x) = x_{j} - b_{j}\), entonces tenemos que \(g_{j}^{a}(x) \leq 0\) y \(g_{j}^{b}(x) \leq 0\) si y solo si \(a_{j} \leq x_{j} \leq b_{j}\). Con un desarrollo análogo al anterior, tenemos que \(x^{\ast} = [x^{\ast} - \alpha \nabla f(x^{\ast})]^{\#}\), en donde
+\begin{equation*}
+	[z]_i^{\#} = \begin{dcases*}
+		a_{i},	& si \(z_{i} \leq a_{i}\), \\
+		z_{i},	& si \(a_{i} \leq z_{i}\leq b_{i}\), \\
+		b_{i},	& si \(z_{i} \geq b_{i}\),
+	\end{dcases*}
+\end{equation*}
+y podemos extender los métodos iterativos con la siguiente modificación en la iteración:
+\begin{align*}
+	x_{k}(\alpha)	&= [x_{k} - \alpha D_{k} \nabla f(x_{k})]^{\#} \\
+	\alpha_{k}		&= \argmin x_{k}(\alpha) \\
+	x_{k+1}			& \gets [x_{k} - \alpha_{k} D_{k} \nabla f(x_{k})]^{\#}.
+\end{align*}
+
+\section{Método de los Multiplicadores de Lagrange}
+
+La idea básica en los métodos de penalización es eliminar las restricciones y agregar a la función objetivo un término de penalización que prescribe el alto costo de los puntos infactibles. Asociado a estos métodos está el parámetro \(c\), el cual determina el tamaño de la penalización y el grado de aproximación del problema original. A medida de que \(c\) aumenta, la aproximación se vuelve más exacta. Veamos como procede este método.
+
+\subsection{Lagrangiano Aumentado}
+
+Recordemos que para un PRI su lagrangiano aumentado se define como 
+\[L_{c}(x, \lambda) = f(x) + \lambda^{\top} h(x) + c \frac{\lvert h(x) \rvert^2}{2},\]
+donde \(\lambda\) se conoce como el vector multiplicador, \(c\) es el parámetro de penalización y \(\varphi(x) = \frac{x^2}{2}\) es la función de penalización cuadrática. Este método consiste en resolver una secuencia de problemas de la forma
+\begin{align*}
+					& \min L_{c_{k}} (x, \lambda_{k}) = f(x) + \lambda_{k}^{\top} h(x) + c_{k} \frac{\lvert h(x) \rvert^2}{2} \\
+	\text{s.a. } x	& \in X,
+\end{align*}
+donde \(\{\lambda_{k}\}\) es una secuencia acotada y \(\{c_{k}\}\) es una secuencia creciente no acotada, es decir, \(c_{k} \to \infty\). En la versión original del método se toma \(\lambda_{k} = 0\) para todo \(k = 0, 1, \dotsc, \) por lo que la secuencia \(\{c_{k}\}\) determina si el método converge a la solución. El problema de este enfoque es que para valores muy altos de \(c_{k}\) el problema de optimización se vuelve mal condicionado y muy difícil de resolver. Sin embargo, la eficiencia del método mejora considerablemente si se usan valores no nulos para \(\{\lambda_{k}\}\), y se vuelve estable si se usa una secuencia no decreciente para \(\{c_{k}\}\) que crezca sólo cuando sea necesario. Veamos a continuación este enfoque.
+
+\subsection{Multiplicadores con Igualdades}
+
+Dado un PRI, el método de los multiplicadores procede de la siguiente forma:
+\begin{algorithm}[h]
+	\caption{Multiplicadores con Igualdades}
+	\begin{algorithmic}[1]
+		\Require{\(\lambda_{0} > 0\), \(c_{0} > 0\), \(\beta > 1\) y \(\gamma < 1\).}
+		\For{\(k \geq 0\)}
+			\State \(x_k \gets \argmin L_{c_k}(x, \lambda_k)\).
+			\State \(\lambda_{k + 1} \gets \lambda_k + c_k h(x_k)\).
+			\State \( c_{k+1} \gets \begin{dcases*}
+				c_k,		& si \(\lvert h(x_k) \rvert \leq \gamma \lvert h(x_{k-1}) \rvert\),\\
+				\beta c_k,	& si \(\lvert h(x_k) \rvert > \gamma \lvert h(x_{k-1}) \rvert\).
+			\end{dcases*} \)
+		\EndFor
+	\end{algorithmic}
+\end{algorithm}
+
+Lo bueno de este método es que no es necesario que \(c_{k} \to \infty\), por lo que la secuencia de problemas están bien condicionados. En lugar de \(c_{k+1} = \beta c_{k}\) también es factible actualizar \(c_{k+1} = c_{k} + \beta\), que crece de forma lineal.
+
+\subsection{Multiplicadores con Desigualdades}
+
+El método anterior aplica para los PRI, por lo que ahora veremos cómo lo podemos aplicar a un PNL. Recordemos que si agregamos una variable \(z_{j}\) por cada restricción \(g_{j}(x)\), entonces \(g_{j}(x) \leq 0\) si y solo si \(g_{j}(x) + z_{j}^{2} = 0\). Dicho esto, el lagrangiano aumentado de esta transformación tiene la forma
+\begin{equation*}
+	L_{c}(x, z, \lambda, \mu) = f(x) + \lambda^{\top} h(x) + c \frac{\lvert h(x) \rvert^2}{2} + \sum_{j=1}^{r} \mu_{j} [g_{j}(x) + z_{j}^{2}] + c\frac{(g_{j}(x) + z_{j}^{2})^{2}}{2}.
+\end{equation*}
+Para distintos valores de \(\lambda\), \(\mu\) y \(c\), se debe minimizar \(L_{c}(x, z, \lambda, \mu)\) con respecto a \(x\) y a \(z\), pero notemos que minimizar con respecto a \(z\) es equivalente a tener:
+\begin{equation*}
+	z_{j} [\mu_{j} + c (g_{j}(x) + z_{j}^{2})] = 0.
+\end{equation*}
+Como tenemos que \(\mu_{j} \geq 0\) y \(c > 0\), las soluciones posibles para \(z_{j}^{2}\) son
+\begin{align*}
+	\hat{z}_{j}^{2} = 0								&\implies g_{j}(x) + z_{j}^{2} = 0 \implies \min L(\hat{z}_{j}^{2}) = \mu_{j} g_{j}(x) + c \frac{g_{j}(x)^{2}}{2} = 0, \\
+	\hat{z}_{j}^{2} = -[\frac{\mu_{j}}{c}+g_{j}(x)]	&\implies g_{j}(x) + z_{j}^{2} = -\frac{\mu_{j}}{c} \implies \min L(\hat{z}_{j}^{2}) = -\frac{\mu_{j}^2}{2c}.
+\end{align*}
+
+Si \(\hat{z}_{j}^{2} \geq 0\), entonces la solución es \(-[\frac{\mu_{j}}{c} + g_{j}(x)]\), y \(0\) en caso contrario. De forma equivalente, haciendo \(w_{j} = z_{j}^{2}\) tenemos que el óptimo es
+\begin{align*}
+	w_{j}^{\ast}			&= \max \Bigl\{0, - \Bigl[\frac{\mu_{j}}{c} + g_{j}(x)\Bigr]\Bigr\} \\
+	g_{j}(x) + w_{j}^{\ast}	&= \max \Bigl\{g_{j}(x), -\frac{\mu_{j}}{c}\Bigr\}.
+\end{align*}
+Con este resultado, definamos la siguiente función auxiliar:
+\begin{align*}
+	g_{j}^{+}(x, \mu_{j}, c)	&= \max \Bigl\{g_{j}(x), -\frac{\mu_{j}}{c}\Bigr\} \\
+	g^{+}(x, \mu, c)			&= \begin{bmatrix} g_{1}^{+}(x,\mu_{1},c) \\ \vdots \\ g_{r}^{+}(x,\mu_{r},c) \end{bmatrix},
+\end{align*}
+lo que nos permite escribir el lagrangiano aumentado de la siguiente forma equivalente:
+\begin{align*}
+	L_{c}(x, \lambda, \mu)	&= f(x) + \lambda^{\top} h(x) + \mu^{\top} g^{+}(x, \mu, c) + \frac{c}{2} \bigl[\lvert h(x) \rvert^{2} + \lvert g^{+}(x, \mu, c) \rvert^{2}\bigr] \\
+							&= f(x) + \lambda^{\top} h(x) + \frac{c}{2} \Bigl[\lvert h(x) \rvert^{2} + \frac{1}{2c} \sum_{j=1}^{r} \bigl(\max\{0, \mu_{j} + cg_{j}(x)\}^{2} - \mu_{j}^{2}\bigr)\Bigr].
+\end{align*}
+De este resultado es fácil deducir que las iteraciones para los multiplicadores \(\mu\) son
+\begin{align*}
+	\mu_{k+1}	&= \mu_{k} + c_{k} g^{+}(x_{k}, \mu_{k}, c_{k}) \\
+				&= \max \{0, \mu_{k} + c_{k} g(x_{k})\}.
+\end{align*}
+Observemos finalmente que
+\[\pdv{g_{j}^{+}(x, \mu, c)}{x_{i}} = \begin{dcases*}
+	0,						& si \(g_{j}(x) \leq -\frac{\mu_{j}}{c}\), \\
+	\pdv{g_{j}(x)}{x_{i}},	& si \(g_{j}(x) > -\frac{\mu_{j}}{c}\).
+\end{dcases*}
+\]
+
+\subsection{Multiplicadores con Desigualdes Dobles}
+
+Si nuestro PNL tiene restricciones con cotas inferiores y superiores de la forma \(\alpha_{j} \leq g_{j}(x) \leq \beta_{j}\) estas se pueden transformar en dos restricciones de la forma
+\begin{align*}
+	g_{j}(x) - \beta_{j}	&\leq 0 \\
+	\alpha_{j}-g_{j}(x)		&\leq 0,
+\end{align*}
+y así podemos utilizar el método anterior. El problema es que utilizamos el doble de multiplicadores, por lo que puede volverse muy ineficiente. Para poder deducir un método eficiente vamos a replantear el problema de la siguiente forma equivalente
+\begin{align*}
+					& \min \bar{f}(x,v) = f(x) \\
+	\text{s.a. }	& \alpha_{j} \leq g_{j}(x)-v_{j} \leq \beta_{j}, \text{ para } j = 1, \dotsc, r, \\
+					& v_{j} = 0, \text{ para } j = 1, \dotsc, r.
+\end{align*}
+
+Aplicando los multiplicadores a las ecuaciones \(v_{j}=0\) obtenemos:
+\begin{align*}
+					& \min L_{c}(x, v, \mu) = f(x) + \mu^{\top} v + c \frac{\lvert v \rvert^{2}}{2} \\
+	\text{s.a. }	& \alpha_{j} \leq g_{j}(x) - v_{j} \leq \beta_{j}, \text{ para } j = 1, \dotsc, r.
+\end{align*}
+Usando una idea similar a la de la sección anterior, definimos las funciones
+\begin{align*}
+	\min L_{c}(x, v, \mu)		&= \min f(x) + \sum_{j=1}^{r} p_{j}[g_{j}(x), \mu_{j}, c] \\
+	p_{j}[g_{j}(x), \mu_{j}, c]	&= \min_{\alpha_{j} \leq g_{j}(x) - v_{j} \leq \beta_{j}} \Bigl\{\mu_{j} v_{j} + \frac{c}{2} \lvert v_{j} \rvert^{2}\Bigr\}.
+\end{align*}
+Como el mínimo se debe cumplir o en los extremos o en el interior del intervalo, es fácil calcular que se llega al mínimo en
+\begin{equation*}
+	v_{j}^{\ast} = \begin{dcases*}
+		g_{j}(x) - \beta_{j},	& si \(\mu_{j} + c[g_{j}(x) - \beta_{j}] > 0\), \\
+		g_{j}(x)-\alpha_{j},	& si \(\mu_{j} + c[g_{j}(x) - \alpha_{j}] < 0\) \\
+		-\frac{\mu_{j}}{c},		& en otro caso,
+	\end{dcases*}
+\end{equation*}
+por lo tanto, el valor de la función es
+\begin{equation*}
+	p_{j}[g_{j}(x), \mu_{j}, c] = \begin{dcases*}
+		(g_{j}(x) - \beta_{j}) \left[\mu_{j} + \frac{c (g_{j}(x) - \beta_{j})}{2}\right],	& si \(\mu_{j} + c[g_{j}(x) - \beta_{j}] > 0\), \\
+		(g_{j}(x) - \alpha_{j}) \left[\mu_{j} + \frac{c (g_{j}(x) - \alpha_{j})}{2}\right],	& si \(\mu_{j} + c[g_{j}(x) - \alpha_{j}] < 0\), \\
+		-\frac{\left( \mu_{j}\right)^{2}}{2c},												& en otro caso.
+	\end{dcases*}
+\end{equation*}
+Con este resultado, es fácil deducir que las iteraciones para los multiplicadores \(\mu\) son
+\begin{equation*}
+	\mu_{k+1}^{j} = \begin{dcases*}
+		\mu_{k}^{j} + c_{k}[g_{j}(x_{k}) - \beta_{j}],	& si \(\mu_{k}^{j} + c_{k}[g_{j}(x_{k}) - \beta_{j}] > 0\), \\
+		\mu_{k}^{j} + c_{k}[g_{j}(x_{k}) - \alpha_{j}],	& si \(\mu_{k}^{j} + c_{k}[g_{j}(x_{k}) - \alpha_{j}] < 0\), \\
+		0,												& en otro caso.
+	\end{dcases*}
+\end{equation*}
+Observemos finalmente que
+\begin{equation*}
+	\pdv{p_{j}[g_{j}(x), \mu_{j}, c]}{x_{i}} = \begin{dcases*}
+		\pdv{g_{j}(x)}{x_{i}} [\mu_{j} + c (g_{j}(x) - \beta_{j})],		& si \(\mu_{j} + c[g_{j}(x) - \beta_{j}] > 0\),\\
+		\pdv{g_{j}(x)}{x_{i}} [\mu_{j} + c (g_{j}(x) - \alpha_{j})],	& si \(\mu_{j} + c[g_{j}(x) - \alpha_{j}] < 0\),\\
+		0, 																& en otro caso.
+	\end{dcases*}
+\end{equation*}
+
+\subsection{Funciones de penalización no cuadráticas}
+
+Todos los resultados anteriores consideran una función de penalización cuadrática, es decir, \(\phi(u) = \frac{u^{2}}{2}\). Es posible utilizar otras funciones de penalización, la cuales deben tener las siguientes propiedades.
+
+\begin{definition}
+	Una función \(\phi : \reals \to \reals\) es una función de penalización si cumple que:
+	\begin{enumerate}
+		\item \(\phi\) es continua, diferenciable y estrictamente convexa en \(\reals\).
+		\item \(\phi(0) = 0\) y \(\nabla \phi(0) = 0\).
+		\item \(\nabla \phi(u) \to -\infty\) cuando \(u \to -\infty\), y \(\nabla \phi(u) \to \infty\) cuando \(u \to \infty\). Si además se cumple que \(\nabla^{2} \phi(0) = 1\), entonces se dice que \(\phi\) es \emph{esencialmente cuadrática}.
+	\end{enumerate}
+\end{definition}
+
+\begin{proposition}
+	Las siguientes funciones son funciones de penalización:
+	\begin{enumerate}
+		\item \(\phi(u) = \frac{u^{2}}{2}\).
+		\item \(\phi(u) = \frac{\lvert u \rvert^{\rho}}{\rho}\) con \(\rho >1\).
+		\item \(\phi(u) = \cosh(u) - 1\).
+		\item \(\phi(u) = \frac{u^{2}}{2} + \frac{\lvert u \rvert^{\rho}}{\rho}\) con \(\rho > 1\). Cuando \(\rho \in (1, 2)\) la convergencia puede ser \emph{superlineal}, pero se debe tener cuidado ya que \(\nabla^{2} \phi(0) = \infty\).
+	\end{enumerate}
+\end{proposition}
+
+Todos los métodos anteriores se pueden extender a una función de penalización \(\phi\) cualquiera, y el lagrangiano aumentado queda de la forma
+\begin{align*}
+	L_{c}(x, \lambda)	&= f(x) + \lambda^{\top} h(x) + \frac{1}{c} \sum_{i=1}^{m} \phi[c_k h_i(x)] \\
+	\lambda_{k+1}^{i}	&= \lambda_{k}^{i} + \nabla \phi [c_{k} h_{i}(x_{k})].
+\end{align*}
+
+Para el caso de las desigualdades la definición es un poco más complicada, pero a partir de cualquier función de penalización para igualdades \(\phi\) se puede construir una función de penalización de desigualdades \(\psi\) de la siguiente forma
+\begin{equation*}
+	\psi (t, \mu) = \begin{dcases*}
+		\mu t + \phi(t),								& si \(\mu + \nabla \phi (t) \geq 0\), \\
+		\min_{\tau \in \reals} \mu \tau + \phi (\tau),	& si \(\mu + \nabla \phi (t) < 0\),
+	\end{dcases*}
+\end{equation*}
+de la cual se obtienen los siguientes resultados:
+\begin{align*}
+	L_{c}(x, \mu)			&= f(x) + \frac{1}{c} \sum_{j=1}^{r} \psi [c g_{j}(x), \mu_{j}] \\
+	\nabla_{t} \psi(t, \mu)	&= \max \{0, \mu + \nabla \phi(t)\} \\
+	\mu_{k+1}^{j}			&= \max \{0, \mu_{k}^{j} + \nabla \phi[c_{k} g_{j}(x_{k})]\}.
+\end{align*}
+De forma análoga, en el caso de restricciones con cota inferior y superior la iteración de los multiplicadores son de la forma
+\begin{equation*}
+	\mu_{k+1}^{j} = \begin{dcases*}
+		\mu_{k}^{j} + \nabla \phi[c_{k} (g_{j}(x_{k}) - \beta_{j})],	& si \(\mu_{k}^{j} + \nabla \phi [c_{k} (g_{j}(x_{k}) - \beta_{j})] > 0\), \\
+		\mu_{k}^{j} + \nabla \phi[c_{k} (g_{j}(x_{k}) - \alpha_{j})],	& si \(\mu_{k}^{j} + \nabla \phi [c_{k} (g_{j}(x_{k}) - \alpha_{j})] < 0\), \\
+		0,																& en otro caso.
+	\end{dcases*}
+\end{equation*}
+
+\subsection{Caso General}
+
+Consideremos el PNL general
+\begin{align*}
+					& \min f(x) \\
+	\text{s.a. }	& \alpha_{j} \leq g_{j}(x) \leq \beta_{j}, \text{ para } j = 1, \dotsc, r, \\
+					& a_{i} \leq x_{i} \leq b_{i}, \text{ para } i = 1, \dotsc, n,
+\end{align*}
+donde \(\alpha_{j}, \beta_{j} \in \reals \cup \{-\infty, \infty\}\), con \(\alpha_{j} \leq \beta_{j}\) para todo \(j = 1, \dotsc, r\), y \(a_{i}, b_{i} \in \reals \cup \{-\infty, \infty\}\), con \(a_{i} \leq b_{i}\) para todo \(i = 1, \dotsc, n\). A continuación mostraremos el algoritmo del método de los multiplicadores de Lagrange general, en donde, para simplificar la lectura, denotaremos a las condiciones sobre \(p_j\) como
+\begin{align*}
+	\zeta_j	&= \mu_{j} + \nabla \phi_{j}[c_{j}(g_{j}(x) - \beta_{j})],\\
+	\xi_j	&= \mu_{j} + \nabla \phi_{j}[c_{j}(g_{j}(x) - \alpha_{j})].
+\end{align*}
+
+\begin{algorithm}[h]
+	\caption{Método de los Multiplicadores de Lagrange General}
+	\begin{algorithmic}[1]
+		\Require{Penalizaciones \(\phi_{j}(t)\), multiplicadores iniciales \(\mu_{0,j} \geq 0\), de \(g_{j}(x)\), constantes de penalización iniciales \(c_{0,j} \geq 0\), parámetros de umbral \(0 < \gamma_{j} < 1\), y parámetros de actualización \(\rho_{j} > 1\), para \(j = 1, \dotsc, r\); punto inicial \(x_{0, i}\) para \(i = 1, \dotsc, n\).}
+		\State Definir el lagrangiano aumentado de la siguiente forma:
+		\begin{align*}
+			L_{c}(x, \mu)					&= \min f(x) + \sum_{j=1}^{r} p_{j}[g_{j}(x), \mu_{j}, c_{j}] \\
+			p_{j}[g_{j}(x), \mu_{j}, c_{j}]	&= \begin{dcases*}
+				(g_{j}(x)-\beta_{j}) \mu_{j} + \frac{\phi_{j} [c_{j}(g_{j}(x) - \beta_{j})]}{c_{j}},					& si \(\zeta_j > 0\), \\
+				(g_{j}(x)-\alpha_{j}) \mu_{j} + \frac{\phi_{j} [c_{j}(g_{j}(x) - \alpha_{j})]}{c_{j}},					& si \(\xi_j < 0\), \\
+				\frac{[\mu_{j} (\nabla\phi_{j})^{-1}(-\mu_{j}) + \phi_{j}((\nabla\phi_{j})^{-1}(-\mu_{j}))]}{c_{j}},	& en otro caso,
+			\end{dcases*}\\
+			\pdv{p_{j}[g_{j}(x), \mu_{j}, c_{j}]}{x_{i}}	&= \begin{dcases*}
+				\pdv{g_{j}(x)}{x_{i}} (\mu_{j} + \nabla \phi_{j}[c_{j}(g_{j}(x)-\beta_{j})]), & si \(\zeta_j > 0\), \\
+				\pdv{g_{j}(x)}{x_{i}} (\mu_{j}+\nabla \phi_{j}[c_{j}(g_{j}(x)-\alpha_{j})]), & si \(\xi_j < 0\), \\
+				0 & en otro caso.
+			\end{dcases*}
+		\end{align*}
+		\For{\(k \geq 0\)}
+			\State Calcular multiplicadores \(\mu_{k,j}\), constantes de penalización \(c_{k,j}\) y punto actual \(x_{k}\).
+			\State Calcular dirección de descenso \(D_k\) para \(x\) usando algún método de optimización.
+			\State Calcular, con algún método de paso óptimo, \(\delta_k = \argmin_\delta J_{c_k}^{a \# b}(\delta)\), donde
+			\[J_{c_k}^{a \# b}(\delta) = f([x_{k} + \delta D_{k}]^{a \# b}) + \sum_{j=1}^{r} p_{j} [g_{j}([x_{k} + \delta D_{k}]^{a \# b}), \mu_{k,j}, c_{k,j}],\]
+			y \([z]_i^{a \# b} = \begin{dcases*}
+				a_{i},	& si \(z_{i} \leq a_{i}\), \\
+				z_{i},	& si \(a_{i} \leq z_{i} \leq b_{i}\), \\
+				b_{i},	& si \(z_{i} \geq b_{i}\).
+			\end{dcases*}\)
+			\State \(x_{k+1, i} \gets [x_{k,i} + \delta_{k} D_{k,i}]^{a \# b}\).
+			\State \(\mu_{k+1, j}´ \gets \begin{dcases*}
+					\mu_{k,j} + \nabla \phi_{j}[c_{k,j}(g_{j}(x_{k})-\beta_{j})],	& si \(\mu_{k,j} + \nabla \phi_{j}[c_{k,j}(g_{j}(x_{k}) - \beta_{j})] > 0\), \\
+					\mu_{k,j} + \nabla \phi_{j}[c_{k,j}(g_{j}(x_{k})-\alpha_{j})],	& si \(\mu_{k,j} + \nabla \phi_{j}[c_{k,j}(g_{j}(x_{k}) - \alpha_{j})] < 0\), \\
+					0																& en otro caso.
+				\end{dcases*}\)
+			\State \(\Delta_{k, j} \gets \begin{dcases*}
+				g_{j}(x_{k}) - \beta_{j},	& si \(g_{j}(x_{k}) > \beta_{j}\), \\
+				\alpha_{j}-g_{j}(x_{k}),	& si \(g_{j}(x_{k}) < \alpha_{j}\), \\
+				0							& si \(\alpha_{j} \leq g_{j}(x_{k}) \leq \beta_{j}\).
+			\end{dcases*}\)
+			\State \(c_{k+1, j} \gets \begin{dcases*}
+				c_{k,j},			& si \(\Delta_{k+1,j} \leq \gamma_{j} \Delta_{k,j}\),\\
+				c_{k,j}+\rho_{j},	& si \(\Delta_{k+1,j} > \gamma_{j} \Delta_{k,j}\).
+			\end{dcases*}\)
+			\State Si se cumple un criterio de parada, retornar \(x_{k+1}\) como solución. De otra forma, volver al paso 3.
+		\EndFor
+	\end{algorithmic}
+\end{algorithm}

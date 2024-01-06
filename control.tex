@@ -1,0 +1,225 @@
+%!TEX root = main.tex
+
+\section{Control Óptimo}
+
+Un problema de control óptimo es un problema de optimización sobre un sistema que evoluciona en el tiempo y es susceptible de ser influenciado por fuerzas externas, algunas de las cuales podemos controlar. Estas variables se denominan \emph{variables de control}, mientras que las variables internas del sistema que no podemos controlar de forma directa se denominan \emph{variables de estado}. La definición típica de un problema de control óptimo a tiempo discreto y horizonte finito es la siguiente:
+\begin{align*}
+	J(\bfu, \bfx)		&= \min_{\bfu,\bfx} g_{N}(x_{N}) + \sum_{i=0}^{N-1} g_{i}(x_{i}, u_{i}), \\
+	\text{s.a. } x_{i+1}	&= f_{i}(x_{i},u_{i}), \text{ para } i = 0, \dotsc, N-1 \\
+	x_{i}					&\in X_{i} \subseteq \reals^{n}, \text{ para } i = 1, \dotsc, N,\\
+	x_{0}					&\text{ dado,} \\
+	u_{i}					&\in U_{i} \subseteq \reals^{m}, \text{ para } i = 0, \dotsc, N-1,
+\end{align*}
+donde cada uno de los elementos recibe el siguiente nombre: \(u_i\) es el vector de control, \(x_i\) es la trayectoria de control, \(\bfu\) es el vector de estado, \(\bfx\) es la trayectoria de estado, y \(x_{i+1} = f_{i}(x_{i}, u_{i})\) es el sistema de ecuaciones. La solución analítica se obtiene resolviendo el siguiente sistema de ecuaciones, llamado \emph{ecuación adjunta}:
+\begin{align*}
+	p_{N}				&= \nabla g_{N} \\
+	p_{i}				&= \nabla_{x_{i}} g_{i} + \langle \nabla_{x_{i}} f_{i}, p_{i+1} \rangle \\
+	\nabla_{u_{i}} J	&= \nabla_{u_{i}} g_{i} + \langle \nabla_{u_{i}} f_{i}, p_{i+1} \rangle \\
+	\text{para }		&i = N-1, \dotsc, 0,
+\end{align*}
+donde los \(p_{i}\) se llaman los \emph{vectores de coestado}. Utilizando estas ecuaciones, para cualquier \(\bfu\) podemos calcular \(\nabla J\) en tres pasos: el primero es un paso \emph{hacia adelante}, en donde resolvemos para \(x_{i+1}\); el segundo es un paso \emph{hacia atrás}, en donde resolvemos para \(p_i\); y el tercero es un paso \emph{paralelo}, en donde resolvemos para \(\nabla_{u_i} J\).
+
+Definamos la función hamiltoniana del sistema como
+\[ H_{i}(x_{i}, u_{i}, p_{i+1}) = g_{i}(x_{i}, u_{i}) + \langle f_{i}(x_{i}, u_{i}), p_{i+1} \rangle,\]
+para \(i = 0, \dotsc, N-1\). Entonces el óptimo \((\bfx^{\ast}, \bfu^{\ast}, \bfp^{\ast})\) cumple las siguientes propiedades necesarias:
+\begin{align*}
+	\nabla_{u_{i}} H_{i}(x_{i}^{\ast}, u_{i}^{\ast}, p_{i+1}^{\ast})	&= 0, \text{ para } i = 0, \dotsc, N-1,\\
+	\nabla_{x_{i}} H_{i}(x_{i}^{\ast}, u_{i}^{\ast}, p_{i+1}^{\ast})	&= p_{i}^{\ast}, \text { para } i = 1, \dotsc, N-1,\\
+	\nabla g_{N}(x_{N}^{\ast})											&= p_{N}^{\ast}.
+\end{align*}
+De esta forma, se puede implementar fácilmente un método del gradiente para el problema de control óptimo:
+\begin{equation*}
+	u_{i}^{k+1} \gets u_{i}^{k} - \alpha^{k} \nabla_{u_{i}} H_{i}(x_{i}^{k}, u_{i}^{k}, p_{i+1}^{k}).
+\end{equation*}
+El problema con este enfoque es que es necesario poder expresar las funciones \(f_{i}(x_{i}, u_{i})\) de forma explícita, para así calcular sus derivadas. No siempre es posible conocer las funciones de forma explícita, pero sí es posible calcular \(f_{i}(x_{i}, u_{i})\) para cualquier par \((x_{i}, u_{i}).\) Es fácil ver que, dado \(x_{0}\) y \(\bfu\), entonces existen funciones
+\[\phi_{i} : \bigotimes_{k=0}^{N-1} U_{k} \to X_{i}\]
+tales que \(x_{i} = \phi_{i}(\bfu) = \phi_{i}(u_{0}, \dotsc, u_{N-1})\) para \(i = 1, \dotsc, N\). Reemplazando \(x_{i}\) por \(\phi_{i}(\bfu)\) obtenemos el siguiente problema equivalente:
+\begin{align*}
+	J(\bfu)			&= \min_{\bfu, \bfx} g_{N}(\phi_{N}(\bfu)) + \sum_{i=0}^{N-1} g_{i}(\phi_{i}(\bfu), u_{i}) \\
+	\text{s.a. } u_{i}	&\in U_{i} \subseteq \reals^{m}, \text{ para } i = 0, \dotsc, N-1.
+\end{align*}
+De esta forma, obtenemos un problema de optimización no lineal en las variables de control \(\bfu\), el cuál se puede resolver con cualquier método clásico. Sin embargo, si nuestro sistema no es determinista, es decir, las funciones \(f_{i}(x_{i}, u_{i})\) son variables aleatorias, entonces debemos replantear el problema para poder resolverlo.
+
+\subsection{Control Óptimo Estocástico}
+
+Un problema de control óptimo estocástico a tiempo discreto y horizonte finito \(N\) se define de la siguiente forma:
+\begin{align*}
+	J(\bfu, \bfx)				&= \min_{\bfu, \bfx} \mean_{w}\left[g_{N}(x_{N}) + \sum_{k=0}^{N-1} g_{k}(x_{k}, u_{k}, w_{k})\right] \\
+	\text{s.a. } x_{k+1}			&= f_{k}(x_{k}, u_{k}, w_{k}), \text{ para } k = 0, \dotsc, N-1, \\
+	x_{k}							&\in X_{k} \subseteq \reals^{n}, \text{ para } k = 1, \dotsc, N,\\
+	x_{0}							&\text{ fijo,} \\
+	u_{k}							&\in U_{k}(x_{k}) \subseteq \reals^{m}, \text{ para } k = 0, \dotsc, N-1, \\
+	w_{k}							&\in W \text{ son variables aleatorias,} \\
+	\prob(w_{k} \mid x_{k}, u_{k})	&\text{ es una medida en }W.
+\end{align*}
+
+Como podemos observar, la ecuación de estado ahora depende de las variables aleatorias \(w_{k}\), por lo que las variables de estado \(x_{k}\) se generan de forma aleatoria. Una manera alternativa de definir el problema es considerar a los \(X_{k}\) como espacios medibles dotados de una función de probabilidad condicional \(\prob(x_{k+1} \mid x_{k}, u_{k})\) y definir \(x_{k+1} = f_{k}(x_{k}, u_{k}, w_{k}) = w_{k}\), por lo que \(\prob(w_{k} \mid x_{k}, u_{k}) = \prob(x_{k+1} \mid x_{k}, u_{k})\). Utilizando esta nomenclatura, el problema queda de la siguiente forma:
+\begin{align*}
+	J(\bfu)							&= \min_{\bfu} \mean_{x} \left[g_{N}(x_{N}) + \sum_{k=0}^{N-1} g_{k}(x_{k}, u_{k})\right] \\
+	\text{s.a. } x_{k}					&\in X_{k} \subseteq \reals^{n}, \text{ para } k = 1, \dotsc,N,\\
+	x_{0}								&\text{ fijo,} \\
+	u_{k}								&\in U_{k}(x_{k}) \subseteq \reals^{m}, \text{ para } k = 0, \dotsc, N-1,\\
+	\prob(x_{k+1} \mid x_{k}, u_{k})	&\text{ es una medida en } X_{k+1}.
+\end{align*}
+
+Definimos una política del problema como una secuencia de medidas \(\pi = (\mu_{0}, \dotsc, \mu_{N-1})\) tal que para todo \(k\) se cumple que \(\mu_{k}(U(x_{k}) \mid x_{0}, u_{0}, \dotsc, u_{k-1}, x_{k}) = 1.\) En el caso en que para todo \(k\) y secuencia \((x_{0}, u_{0}, \dotsc, u_{k-1}, x_{k})\) asigna un único punto \(u_{k}\), entonces denotamos que \(\mu_{k}(u_{0}, \dotsc, u_{k-1}, x_{k}) = u_{k} \in U(x_{k})\). En otras palabras, \(\mu_{k}\) mapea el estado \(x_{k}\) al control \(u_{k}\). De esta forma, denotamos
+\begin{equation*}
+	J_{\pi}(x_{0}) = \mean_{x}\left[g_{N}(x_{N}) + \sum_{k=0}^{N-1} g_{k}(x_{k}, u_{k})\right],
+\end{equation*}
+y \(\pi^{\ast}\) es la \emph{política óptima} que cumple con \(J_{\pi ^{\ast}}(x_{0})=\min_{\pi }J_{\pi }(x_{0})=\min_{\bfu}J(\bfu)\).
+
+Si se da el caso de que los \(x_k\) no son observables de forma directa, entonces decimos que el problema es un \emph{problema con información de estado imperfecta}. En vez de \(x_{k}\) observamos \(z_{0} = h_{0}(x_{0}, v_{0})\) y \(z_{k} = h_{k}(x_{k}, u_{k-1}, v_{k})\) para \(k\geq 1\), donde \(v_{k}\) son perturbaciones. En este caso definimos el \emph{vector de información} en el instante \(k\) como
+\begin{equation*}
+	I_{k} = (z_{0}, \dotsc, z_{k}, u_{0}, \dotsc, u_{k-1}),
+\end{equation*}
+el cual se ocupa en \(\mu_{k}(I_{k}) = u_{k} \in U_{k}\), donde \(U_{k}\) ya no depende de \(x_{k}\), y la esperanza es en función de las perturbaciones \(v_{k}\) y las variables aleatorias \(w_{k}\). En el caso en donde se observan los \(x_{k}\), entonces se tiene que \(I_{k} = (x_{0}, \dotsc, x_{k}, u_{0}, \dotsc, u_{k-1})\).
+
+\subsection{Control Subóptimo}
+
+En la práctica es muy difícil, y a veces imposible, resolver de forma exacta un problema de control óptimo estocástico, por lo que la única solución práctica es resolver un problema similar al original, de menor complejidad, y de forma numérica. A estas simplificaciones se les conoce como \emph{esquemas de control subóptimas}, y generalmente permiten resolver distintas instancias de una misma familia de problemas con la misma estructura, pero con distintos valores en sus parámetros.
+
+Uno de los esquemas de control subóptimo más utilizado es el Controlador Equivalente de Certeza (CEC por sus siglas tanto en español como en inglés, \emph{Certainty Equivalent Controller}), el cual está inspirado en la teoría del control lineal-cuadrático. La idea es construir \emph{estimadores} de los valores \emph{típicos} de los estados \(x_{k}\), los cuales se calculan a partir del vector de información \(I_{k}\), y/o de las perturbaciones \(w_{k}\). El estimador más común es considerar la esperanza condicional, es decir,
+\begin{align*}
+	\bar{x}_{k}(I_{k})			&= \mean(x_k \mid I_k) \\
+	\bar{w}_{k}(x_{k},u_{k})	&= \mean(w_k \mid x_k, u_k),
+\end{align*}
+para los valores de \(x_{k}\) y \(w_{k}\). En cada tiempo \(k\) se calcula el control \(\tilde{\mu}_{k}(I_{k})\) de la siguiente forma:
+\begin{enumerate}
+	\item Dado \(I_{k}\), calcular el estimador \(\bar{x}_{k}(I_{k})\).
+	\item Fijando \(x_{k} = \bar{x}_{k}(I_{k})\) y \(w_{k}, \dotsc, w_{N-1}\) a valores típicos \(\bar{w}_{k}, \dotsc, \bar{w}_{N-1}\), calcular la secuencia \(\{\tilde{u}_{k}, \tilde{u}_{k+1}, \dotsc, \tilde{u}_{N-1}\}\) que resuelve el problema determinista
+	\begin{align*}
+		J_{k}(u_{k}, \dotsc, u_{N-1})	&= \min_{u_{k}, \dotsc, u_{N-1}} g_{N}(x_{N}) + \sum_{i=k}^{N-1} g_{i}(x_{i}, u_{i}, \bar{w}_{i}) \\
+		\text{s.a. } x_{k}				&= \bar{x}_{k}(I_{k}),\\
+		u_{i}							&\in U_{i}(x_{i}), \\
+		x_{i+1}							&= f_{i}(x_{i}, u_{i}, \bar{w}_{i}), \text{ para } i = k, k+1, \dotsc, N-1.
+	\end{align*}
+	\item Usar como control el primer elemento \(\tilde{\mu}_{k}(I_{k}) = \tilde{u}_{k}\).
+\end{enumerate}
+
+Notemos que el primer paso no es necesario en el caso de información perfecta, y se necesita resolver \(N\) problemas para obtener la secuencia completa de \(u_{0}, \dotsc, u_{N-1}\). Todos estos problemas pueden resolverse de forma numérica utilizando alguno de los algoritmos iterativos de optimización como el método del gradiente o de Newton.
+
+Otra forma alternativa de resolver el problema es, en vez de resolver los \(N\) problemas recién descritos (lo que se llama enfoque \emph{on-line}), utilizar un enfoque \emph{off-line} que calcula un controlador de retroalimentación óptimo (\emph{optimal feedback controller} en inglés) para el problema determinista que se obtiene a partir del problema original, reemplazando todos las cantidades inciertas por sus valores esperados, es decir,
+\begin{align*}
+	J(\mu_{0}(x_{0}), \dotsc, \mu_{N-1}(x_{N-1}))	&= \min g_{N}(x_{N}) + \sum_{k=0}^{N-1} g_{k}(x_{k}, \mu_{k}(x_{k}), \bar{w}_{k}) \\
+	\text{s.a. } x_{k+1}							&= f_{k}(x_{k}, \mu_{k}(x_{k}), \bar{w}_{k}), \\
+	\mu_{k}(x_{k})									&\in U_{k}(x_{k}),
+\end{align*}
+y así el control en el tiempo \(k\) corresponde a \(u_{k} = \mu_{k}(x_{k})\). En el caso de información imperfecta, los \(x_{k}\) son reemplazados por \(\bar{x}_{k}(I_{k})\).
+
+Utilizando la definición equivalente con \(\prob(x_{k+1} \mid x_{k}, u_{k})\) (o \(\prob(x_{k+1} \mid I_{k}, u_{k})\) en el caso más general) en lugar de los \(w_{k}\), el problema a resolver queda de la forma
+\begin{align*}
+	J(u_{0}, \dotsc, u_{N-1})		&= \min g_{N}(x_{N}) + \sum_{k=0}^{N-1} g_{k}(x_{k}, u_{k})\\
+	\text{s.a. } x_{k+1}			&= \mean(x_{k+1} \mid I_k, u_k), \\
+	u_{k}							&\in U_{k}(x_{k}).
+\end{align*}
+
+El enfoque CEC es bastante simple, pero en general entrega buenos resultados en la práctica. Existen múltiples variaciones, tales como fijar sólo algunos \(w_{k}\) (denotado como CEC estocástico parcial). En el caso de información imperfecta, un enfoque muy utilizado es el denotado Controlador de retroalimentación de bucle abierto (OLCF por sus siglas en inglés, \emph{open-loop feedback controller}), el cual es similar al anterior, pero considera la distribución de probabilidades condicional de \(x_{k}\) dado \(I_{k}\), para luego calcular la esperanza utilizando dicha distribución:
+\begin{equation*}
+	J_{k}(u_{k}, \dotsc, u_{N-1}) = \min_{u_{k}, \dotsc, u_{N-1}} \mean\left[g_{N}(x_{N}) + \sum_{i=k}^{N-1} g_{i}(x_{i},u_{i},w_{i}) \mid I_{k}\right].
+\end{equation*}
+
+\subsection{Problema Subóptimo Modificado}
+
+Sin pérdida de generalidad, vamos a considerar una definición equivalente del problema de control óptimo estocástico.
+
+\begin{definition}
+	Sea \(x_{0}\) fijo y \(N\) el horizonte de tiempo. Para \(k = 1, \dotsc, N\) sean \(x_{k}\) las variables de estado, \(u_{k}\) las variables de control, \(g_{k}(x_{k}, u_{k})\) las funciones de costo y \(\prob(x_{k} \mid x_{k-1}, u_{k})\) una función de probabilidad condicional de \(x_{k}\) dado \(x_{k-1}\) y \(u_{k}.\) Sea \(\bfu = (u_{1}, \dotsc, u_{N})\) la trayectoria de control, con \(\bfu \in U\) el dominio de las trayectorias permitidas. Entonces definimos el problema de Control Óptimo Estocástico a Tiempo Discreto y Control Instantáneo como
+	\begin{align*}
+		J(\bfu; x_{0})					&= \min_{\bfu} \mean_{x} \left[\sum_{k=1}^{N} g_{k}(x_{k}, u_{k})\right] \\
+		\text{s.a. } \bfu				&\in U,\\
+		\prob(x_{k} \mid x_{k-1}, u_{k})	&\text{ es una medida en } X_{k}.
+	\end{align*}
+\end{definition}
+
+Es fácil ver que ambas definiciones son equivalentes, ya que desde la definición original y utilizando las variables auxiliares \(y_{k} = (x_{k}, x_{k-1})\) y \(v_{k} = u_{k-1}\) se reduce a la definición alternativa con las siguientes construcciones:
+\begin{enumerate}
+	\item Para \(k = 1, \dotsc, N+1\),se tiene que
+	\begin{align*}
+		\prob(y_{k} \mid y_{k-1}, v_{k})	&= \prob((x_{k-1}, x_{k}) \mid (x_{k-2}, x_{k-1}), u_{k-1})\\
+											&= \prob(x_{k} \mid (x_{k-2}, x_{k-1}), u_{k-1})\\
+											&= \prob(x_{k} \mid x_{k-1},u_{k-1}).
+	\end{align*}
+	\item Para \(k = 1, \dotsc, N\) se tiene que
+	\begin{align*}
+		\tilde{g}_{N+1}(y_{N+1}, v_{N+1})	&= g_{N}(x_{N})\\
+		\tilde{g}_{k}(y_{k}, v_{k})			&= g_{k-1}(x_{k-1}, u_{k-1}).
+	\end{align*}
+\end{enumerate}
+Con estas construcciones, podemos reducir el primer problema al segundo y las soluciones de ambos problemas coinciden.
+
+\begin{proposition}
+	El vector \(\bfu = (u_{0}, \dotsc, u_{N-1})\) es solución del primer problema si y solo si el vector \(\bfv = (v_{1}, \dotsc, v_{N}) = (u_{0}, \dotsc, u_{N-1})\) es solución del segundo problema.
+\end{proposition}
+
+\begin{definition}
+	Dado \(x_{0}\) fijo y una trayectoria \(\bfu = (\bar{u}_{1}, \dotsc, \bar{u}_{N})\) cualquiera, utilizando las distribuciones condiciones \(\prob(x_{k} \mid x_{k-1}, u_{k})\) definimos los valores típicos esperados de \(x_{1}, \dotsc, x_{N}\) dado \(\bfu\) de manera recursiva:
+	\begin{align*}
+		\bar{x}_{0}	&= x_{0}, \\
+		\bar{x}_{1}	&= \mean[x_{1} \mid x_{0} = \bar{x}_{0}, u_{1} = \bar{u}_{1}] = f_{1}(\bar{u}_{1}), \\
+		\bar{x}_{2}	&= \mean[x_{2} \mid x_{1} = \bar{x}_{1}, u_{2} = \bar{u}_{2}] = \tilde{f}_{2}(\bar{u}_{1}, \bar{x}_{1}) = \tilde{f}_{2}(\bar{u}_{1}, f_{1}(\bar{u}_{1})) = f_{2}(\bar{u}_{1}, \bar{u}_{2}), \\
+		\bar{x}_{k}	&= \mean[x_{k} \mid x_{k-1} = \bar{x}_{k-1}, u_{k} = \bar{u}_{k}] = f_{k}(\bar{u}_{1}, \dotsc, \bar{u}_{k}), \\
+		\bar{x}_{N}	&= \mean[x_{N} \mid x_{N-1} = \bar{x}_{N-1}, u_{N} = \bar{u}_{N}] = f_{N}(\bar{u}_{1}, \dotsc, \bar{u}_{N}).
+	\end{align*}
+\end{definition}
+
+\begin{definition}
+	Dado \(x_{0}\) fijo, definimos la función de costo de valores típicos esperados como
+	\begin{equation*}
+		J(\bfu; x_{0}) = \sum_{k=1}^{N} g_{k}(\bar{x}_{k}, u_{k}).
+	\end{equation*}
+\end{definition}
+
+\begin{definition}
+	Dado \(x_{0}\) fijo, definimos la función de costo de valores típicos esperados desde el instante \(k = 1, \dotsc, N\) como
+	\begin{equation*}
+		J_{k}(u_{k}, \dotsc, u_{N}; \bar{x}_{k-1}) = \sum_{i=k}^{N} g_{i}(\bar{x}_{i}, u_{i})
+	\end{equation*}
+\end{definition}
+
+
+\begin{proposition}
+	Supongamos que las funciones \(g_{k}\) y \(f_{k}\) son continuas y derivables. Sea \(\bfu^{\ast} = (u_{1}^{\ast}, \dotsc, u_{N}^{\ast})\) una trayectoria que cumple con
+	\begin{equation*}
+		\nabla_{\bfu} J(\bfu^{\ast}; x_{0}) = 0.
+	\end{equation*}
+	Entonces para todo \(k = 1, \dotsc, N\) se cumple que
+	\begin{equation*}
+		\nabla_{\bfu_{k}} J_{k}(u_{k}^{\ast}, \dotsc, u_{N}^{\ast}; \bar{x}_{k-1}) = 0.
+	\end{equation*}
+\end{proposition}
+
+\begin{proof}
+	La demostración es directa del hecho de que \(\bar{x}_{k} = f_{k}(u_{1}, \dotsc, u_{k})\), por lo tanto \(g_{k}(\bar{x}_{i}, u_{k}) = \tilde{g}_{k}(u_{1}, \dotsc, u_{k})\). Entonces, las derivadas parciales de las funciones \(\tilde{g}_{k}\) cumplen que \(\pdv*{g_{k}}{u_{j}} = 0\) si \(j > k\). Haciendo inducción en \(k\) desde \(N\):
+	
+	\begin{enumerate}
+		\item Como \(\pdv*{g_{k}(\bar{x}_{k}, u_{k}^{\ast})}{u_{N}} = 0\) para \(k < N\), entonces
+		\begin{align*}
+			\nabla_{\bfu_{N}} J_{k}(u_{N}^{\ast}; \bar{x}_{N-1})	&= \pdv{g_{N}(\bar{x}_{N}, u_{N}^{\ast})}{u_{N}}\\
+																	&= \pdv{g_{N}(\bar{x}_{N}, u_{N}^{\ast})}{u_{N}} + \sum_{k=1}^{N-1} \pdv{g_{k}(\bar{x}_{k}, u_{k}^{\ast})}{u_{N}}\\
+																	&= \pdv{J(\bfu; x_{0})}{u_{N}}\\
+																	&= 0.
+		\end{align*}
+		\item Supongamos que \(\nabla_{\bfu_{k+1}} J_{k+1}(u_{k+1}^{\ast}, \dotsc, u_{N}^{\ast}; \bar{x}_{k}) = 0\). Para todo \(j > k\) tenemos que
+		\begin{align*}
+			\pdv{J_{k}(u_{k}^{\ast}, \dotsc, u_{N}^{\ast}; \bar{x}_{k-1})}{u_{j}}	&= \sum_{i=k}^{N}\pdv{g_{i}(\bar{x}_{i}, u_{i}^{\ast})}{u_{j}}\\
+																					&= \pdv{g_{k}(\bar{x}_{i}, u_{i}^{\ast})}{u_{j}} + \sum_{i = k + 1}^{N}\pdv{g_{i}(\bar{x}_{i}, u_{i}^{\ast})}{u_{j}}\\
+																					&= 0 + 0.
+		\end{align*}
+		La última igualdad se tiene por lo siguiente: el primer término vale \(0\) pues \(\pdv*{g_{k}}{u_{j}} = 0\) si \(j > k\), y el segundo término vale \(0\) ya que
+		\[\sum_{i = k + 1}^{N} \pdv{g_{i}(\bar{x}_{i}, u_{i}^{\ast})}{u_{j}} = \pdv{J_{k+1}(u_{k+1}^{\ast}, \dotsc, u_{N}^{\ast}; \bar{x}_{k})}{u_{j}},\]
+		y aplicamos la hipótesis inductiva.
+		
+		\item Tenemos que para \(k > i\), \(\pdv*{g_{i}}{u_{k}} = 0\). Esto implica que
+		\[\sum_{i=1}^{k-1} \pdv{g_{i}(\bar{x}_{i}, u_{i}^{\ast})}{u_{k}} = 0,\]
+		por lo que tenemos que
+		\begin{align*}
+			\pdv{J_{k}(u_{k}^{\ast}, \dotsc, u_{N}^{\ast}; \bar{x}_{k-1})}{u_{k}}	&= \sum_{i=k}^{N} \pdv{g_{i}(\bar{x}_{i}, u_{i}^{\ast})}{u_{k}}\\
+																					&= \sum_{i=k}^{N} \pdv{g_{i}(\bar{x}_{i}, u_{i}^{\ast})}{u_{k}} + \sum_{i=1}^{k-1} \pdv{g_{i}(\bar{x}_{i}, u_{i}^{\ast})}{u_{k}}\\
+																					&= \sum_{i=1}^{N} \pdv{g_{i}(\bar{x}_{i}, u_{i}^{\ast})}{u_{k}}\\
+																					&= \pdv{J(\bfu^{\ast}; x_{0})}{u_{k}}\\
+																					&= 0.
+		\end{align*}
+	\end{enumerate}
+\end{proof}
+
+Esta proposición nos entrega un resultado que dice que si obtenemos una trayectoria crítica \(\bfu^{\ast}\) de \(J(\bfu; x_{0})\), entonces las colas \(\bfu_{k}^{\ast} = (u_{k}^{\ast}, \dotsc, u_{N}^{\ast})\) son trayectorias críticas de \(J_{k}(\bfu_{k}; \bar{x}_{k-1})\), por lo cual solo basta con resolver el problema inicial una vez, sin la necesidad de hacer las \(N\) etapas como en el caso de CEC.

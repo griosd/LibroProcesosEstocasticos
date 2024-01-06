@@ -1,0 +1,173 @@
+%!TEX root = thesis.tex
+
+%packages
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+% For citations 
+%\usepackage{natbib}
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{graphicx} % more modern
+\usepackage{amsmath, amsthm, amssymb}
+\usepackage{tabularx}
+\usepackage{color}
+\usepackage{natbib}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{subfig}
+\usepackage{enumerate}
+%\usepackage[numbers,sort&compress]{natbib}
+\usepackage{mathrsfs} 
+\usepackage{appendix}
+\usepackage{mathtools}
+\usepackage{bbm}
+\usepackage{latexsym}
+\usepackage[mathscr]{euscript}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\usepackage{afterpage}
+\usepackage{float}
+\usepackage{wrapfig}
+%\usepackage[nottoc,notlot,notlof]{tocbibind}
+\usetikzlibrary{bayesnet, arrows,positioning,chains,fit,shapes,calc}
+%\RequirePackage[colorlinks,citecolor=blue,urlcolor=blue]{hyperref}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{assumption}[theorem]{Assumption}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+
+\newtheorem*{importantconvention}%[theorem]
+{Important Convention}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{question}[theorem]{Question}
+
+%\providecommand{\red}[1]{\textcolor{red}{{\bf [#1]}}}
+\providecommand{\red}[1]{\textcolor{red}{#1}}
+\providecommand{\blue}[1]{\textcolor{blue}{#1}}
+\providecommand{\keywords}[1]{\textcolor{black}{{\bf #1}}}
+\DeclareFontFamily{OT1}{pzc}{}
+\DeclareFontShape{OT1}{pzc}{m}{it}{<-> s * [1.300] pzcmi7t}{}
+\DeclareMathAlphabet{\mathpzc}{OT1}{pzc}{m}{it}
+\newcommand\blankpage{%
+	\null
+	\thispagestyle{empty}%
+	\addtocounter{page}{-1}%
+	\newpage}
+%\newcommand{\arrow}[1]{\overrightarrow{#1}}
+%\newcommand{\ft}[1]{\widehat{ #1 }}
+%\newcommand{\conj}[1]{\overline{#1}}
+%\newcommand{\overbar}[1]{\mkern 1.5mu\overline{\mkern-1.5mu#1\mkern-1.5mu}\mkern 1.5mu}
+
+\newcommand{\eps}{\varepsilon}
+\renewcommand{\eps}{\varepsilon}
+\renewcommand{\epsilon}{\varepsilon}
+\newcommand{\diag}{\mathop{\mathrm{diag}}}
+
+
+\DeclareMathOperator{\supp}{supp}
+\DeclareMathOperator*{\argmin}{argmin}
+\DeclareMathOperator*{\argmax}{argmax}
+\DeclareMathOperator{\Tr}{Tr}
+\DeclareMathOperator\arcsinh{arcsinh}
+\DeclareMathOperator\asinh{asinh}
+\DeclareMathOperator\chol{chol}
+\DeclareMathOperator\Be{Be}
+
+
+
+
+\def\sgn{{\text{sgn}}}
+\def\U{{\mathbf{U}}}
+\def\u{{\mathbf{u}}}
+\def\v{{\mathbf{v}}}
+\def\t{{\mathbf{t}}}
+\def\s{{\mathbf{s}}}
+\def\x{{\mathbf{x}}}
+\def\y{{\mathbf{y}}}
+\def\z{{\mathbf{z}}}
+\def\f{{\mathbf{f}}}
+\def\tto{\bar{\mathbf{t}}}
+
+\def\no{\bar n}
+\def\ro{\bar r}
+\def\xo{\bar{\mathbf{x}}}
+\def\yo{\bar{\mathbf{y}}}
+\def\fo{\bar{\mathbf{f}}}
+\def\GP{{\mathcal{GP}}}
+\def\WGP{{\mathcal{WGP}}}
+\def\O{{\mathcal{O}}}
+\def\R{{\mathbb{R}}}
+\def\GH{{\text{GH}}}
+\def\NR{{\text{NR}}}
+\def\sgn{{\text{sgn}}}
+\def\N{{\mathcal{N}}}
+\def\Id{{\mathbf{id}}}
+\def\H{{\mathcal{H}}}
+\def\X{{\mathcal{X}}}
+\def\Y{{\mathcal{Y}}}
+\def\I{{\mathcal{I}}}
+\def\T{{\mathcal{T}}}
+\def\W{{\mathcal{W}}}
+\def\P{{\mathcal{P}}}
+\def\E{{\mathbb{E}}}
+\def\L{{\mathcal{L}}}
+
+\def\bx{\bar x}
+
+
+\def\xs{\lVert \x \rVert_1}
+\def\ys{\lVert \y \rVert_1}
+
+\def\xn{\lVert \x \rVert_2}
+\def\yn{\lVert \y \rVert_2}
+
+\def\xon{\lVert \xo \rVert_2}
+\def\yon{\lVert \yo \rVert_2}
+
+\def\xxo{ \x, \xo }
+\def\yyo{ \y, \yo }
+
+\def\xxon{\lVert \x, \xo \rVert_2}
+\def\yyon{\lVert \y, \yo \rVert_2}
+
+
+\def\etan{\left\Vert \eta\right\Vert_{2}}
+\def\pin{\left\Vert \pi\right\Vert_{2}}
+
+\def\etatn{\left\Vert \eta_{\t}\right\Vert_{2}}
+\def\pitn{\left\Vert \pi_{\t}\right\Vert_{2}}
+
+\def\lv{\left\vert} 
+\def\rv{\right\vert} 
+\def\lV{\left\Vert} 
+\def\rV{\right\Vert} 
+
+
+
+%fix for the oneside argument
+\makeatletter
+\g@addto@macro\titlepage{\pagenumbering{Alph}}
+\g@addto@macro\endtitlepage{\pagenumbering{roman}}
+\makeatother
+
+\makeatletter
+\newenvironment{chapquote}[2][2em]
+{\setlength{\@tempdima}{#1}%
+	\def\chapquote@author{#2}%
+	\parshape 1 \@tempdima \dimexpr\textwidth-2\@tempdima\relax%
+	\itshape}
+{\par\normalfont\hfill--\ \chapquote@author\hspace*{\@tempdima}\par\bigskip}
+\makeatother

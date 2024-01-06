@@ -1,0 +1,331 @@
+\chapter{Anexo de Optimización}
+
+\begin{chapquote}{Gonzalo Ríos, 2023}
+	``Aquí falta una cita.''
+\end{chapquote}
+
+Durante todo el libro asumimos que el lector tiene conocimientos básicos de optimización, por lo que este capítulo final es un anexo con diferentes métodos de optimización, criterios de parada, tamaño del paso, control óptimo, problemas con restricciones y el método de multiplicadores de Lagrange.
+
+\section{Aproximación Numérica de Derivadas}
+
+Todos los algoritmos necesitan calcular derivadas de primer y/o segundo orden, y si no es posible hacerlo de forma exacta, se realizan aproximaciones numéricas. Las aproximaciones de las tres posibles derivadas son las siguientes:
+
+\begin{align*}
+\dv{f(x)}{x}		& \approx \frac{f(x+h) - f(x-h)}{2h} \\
+\dv[2]{f(x)}{x}		& \approx \frac{f(x+h) - 2f(x) + f(x-h)}{h^2} \\
+\pdv{f(x, y)}{x}{y}	& \approx \frac{f(x+h_x, y+h_y) - f(x-h_x, y+h_y) - f(x+h_x, y-h_y) + f(x-h_x, y-h_y)}{4 h_{x} h_{y}}
+\end{align*}
+
+Para el tamaño de \(h\), \(h_x\) y \(h_y\) podemos considerar un valor fijo o un valor que dependa del valor de la variable, por ejemplo \(h_x = \varepsilon x,\) donde \(\varepsilon\) es una constante fija pequeña, por ejemplo \(O(10^{-3})\). Los gradientes y los hessianos se construyen componente a componente con las fórmulas descritas.
+
+\section{Derivación automática}
+
+Los paquetes computacionales actuales, tales como PyTorch y Jax, permiten calcular las derivadas de forma automática. Los métodos de \emph{autograd} están basados en construir un grafo acíclico dirigido de computación, donde las hojas son los parámetros y la salida del grafo es la función objetiva, por lo que a partir de las derivadas de las funciones elementales y la regla de la cadena, que anunciamos a continuación.
+
+\begin{theorem}
+	(Regla de la cadena) Sean \(I\) y \(J\) dos intervalos abiertos de \(\reals\), \(g:I\to\reals\) y \(f:J\to\reals\) dos funciones tales que \(g(I)\subseteq J\) y \(a \in I\). Si \(g\) es diferenciable en \(a\) y \(f\) es diferenciable en \(g(a)\), entonces la composición \(f \circ g\) es diferenciable en \(a\) y se cumple la identidad \[(f \circ g)'(a) = f'(g(a))g'(a).\]
+\end{theorem}
+
+\section{Metodos de Optimización Iterativos}
+A continuación veremos los distintos métodos iterativos que se utilizan para resolver un problema de optimización, en particular maximizar la verosimilitud de los datos dado el modelo y sus parámetros a entrenar. Una gran familia de métodos de optimización son aquellos que tienen la siguiente forma iterativa
+\[x_{k+1} = x_k + \alpha_k D_{k},\]
+donde \(D_k\) es el vector que indica la dirección del paso iterativo, y \(\alpha_k\) es el tamaño del paso. Estos tamaños pueden ser asignados de múltiples formas, como constantes, decrecientes, o soluciones de un subproblema de optimización (de paso máximo). La elección de \(D_k\) y \(\alpha_k\) deben cumplir, por lo general, que \(f(x_k + \alpha_k D_{k}) < f(x_k).\)
+
+
+\subsection{Método del Gradiente}
+
+Uno de los métodos más simples para optimizar es el conocido método del gradiente, que se basa en que el gradiente indica la dirección de máximo ascenso, por lo que el método recursivo comienza desde algún \(x_0\) inicial para luego calcular
+\[x_{k+1} = x_k - \alpha_k \nabla f(x_k).\]
+
+\subsection{Método del Gradiente Conjugado}
+
+Otro método utilizado, basado en el problema de optimización cuadrática, es el método de gradiente conjugado. Las iteraciones del método son de la siguiente forma:
+\begin{align*}
+x_{k+1}		&= x_k + \alpha_k D_k, \\
+\alpha_k	&= \argmin_{\alpha} f(x_k + \alpha D_k),\\
+D_k			&= -\nabla f(x_k) + \beta_k D_{k-1}, \\
+\beta_k		&= \frac{\nabla f(x_k)^{\top} (\nabla f(x_k) - \nabla f(x_{k-1}))}{\nabla f(x_{k-1})^{\top} \nabla f(x_{k-1})}.
+\end{align*}
+
+La idea del método es generar direcciones \(D_k\) conjugadas entre sí. Con \(x_k \in \reals^n\), este método es utilizado cuando \(n\) es muy grande, pero a medida que la cantidad de iteraciones es cercana a \(n\), las direcciones generadas pierden la propiedad de ser conjugadas, por lo que es recomendable tener una política de reinicio, normalmente a través de una iteración normal del método del gradiente cada \(n\) iteraciones, o cada \(k < n\) iteraciones, o si
+\[\left \vert \nabla f(x_k)^{\top} \nabla f(x_{k-1}) \right\vert > \gamma \left\Vert \nabla f(x_{k-1}) \right\Vert^2,\]
+con \(\gamma \in (0,1)\). Este último criterio es un test de pérdida de conjugación, ya que es deseable que \(\nabla f(x_k)^{\top} \nabla f(x_{k-1}) = 0\).
+
+\subsection{Método de Newton-Raphson}
+
+Un método alternativo al método del gradiente es el método de \emph{Newton-Raphson} (también conocido simplemente como el método de \emph{Newton}), que realiza una aproximación de segundo orden, por lo que teóricamente su tasa de convergencia es mayor. Análogamente, el método comienza desde algún \(x_0\) inicial para luego calcular:
+\[x_{k+1} = x_k - \alpha_k H_f^{-1} (x_k) \nabla f(x_k).\]
+Cuando \(\alpha_k = 1\), se dice que es una iteración de Newton puro.
+
+\subsubsection{Aproximación diagonal al método de Newton}
+
+Si la dimensión de \(f\) es muy grande, entonces calcular su hessiano e invertirlo en cada iteración puede ser extremadamente costo, por lo que una opción es aproximar el hessiano de forma que el costo computacional baje considerablemente. Existen diversas formas de aproximarlo, y una elección común es sólo considerar las derivadas de la diagonal del hessiano, es decir:
+\begin{equation*}
+[H_f^{-1}(x_k)]_{i, j} \approx
+\begin{dcases*}
+\left(\dv[2]{f(x)}{x_i}\right)^{-1}	& si \(i = j\),\\
+0									& si \(i\neq j\).
+\end{dcases*}
+\end{equation*}
+
+\subsubsection{Método de Newton modificado}
+
+En muchos casos, el hessiano de \(f\) en \(x_k\) existe pero está mal condicionado, por lo que su inversa tiene muchos errores numéricos o simplemente no existe. En esos casos se puede modificar el método de Newton para que escoja de manera inteligente la dirección \(D_k\). Una opción es simplemente considerar que \(D_k = -H_f^{-1}(x_0) \nabla f(x_k)\), es decir, considerar el hessiano sólo del punto inicial. Una opción más exacta es actualizar el hessiano cada \(p > 1\) iteraciones. Otra opción es escoger \(D_k = -H_f^{-1}(x_k) \nabla f(x_k)\) solo si \(H_f^{-1}(x_k)\) existe y no está mal condicionado. En caso contrario, se puede escoger \(D_k = -D \nabla f(x_k)\) con \(D\) una matriz definida positiva y simétrica, como por ejemplo la identidad \(D = I\), resultando \(D_k = -\nabla f(x_k)\) que corresponde a una iteración del método del gradiente.
+
+\subsubsection{Métodos de Quasi-Newton}
+
+Los métodos de Quasi-Newton son métodos de descenso de la forma
+\begin{equation*}
+x_{k+1} = x_k - \alpha_k D_k \nabla f(x_k),
+\end{equation*}
+donde \(D_k\) es una matriz definida positiva, la cual trata de aproximar al método de Newton. En la práctica, estos métodos tienen un buen orden de convergencia, y el cálculo de \(D_k\) es considerablemente menor que calcular el inverso del hessiano de \(f\), ya que utilizan la matriz de la iteración anterior para calcular la actual. Existe un gran variedad de estos métodos, pero la subclase conocida como \emph{Broyden Class of Quasi-Newton Algorithms} es la más conocida. Los cálculos iterativos del método parten desde \(x_k\), \(\alpha_k,\) \(\nabla f(x_k)\) y \(D_k\) para calcular \(D_{k+1}\) como sigue:
+\begin{align*}
+x_{k+1}		&= x_k - \alpha_k D_k \nabla f(x_k),\\
+\Delta_k	&= x_{k+1} - x_k,\\
+y_k			&= \nabla f(x_{k+1}) - \nabla f(x_k), \\
+\sigma_k	&= \Delta_k^{\top} y_k,\\
+\lambda_k	&= D_k y_k,\\
+\tau_k		&= y_k^{\top} \lambda_k,\\
+\upsilon_k	&= \frac{\Delta_k}{\sigma_k} - \frac{\lambda_k}{\tau_k}, \\
+D_{k+1}		&= D_k + \frac{\Delta_k \Delta_k^{\top}}{\sigma_k} - \frac{\lambda_k y_k^{\top} D_k}{\tau_k} + \zeta_k \tau_k \upsilon_k \upsilon_k^{\top},
+\end{align*}
+donde \(D_0\) es una matriz definida positiva arbitraria y \(\zeta_k \in [0, 1]\). El caso particular de \(\zeta_k = 0\) se llama \emph{Davidon-Fletcher-Powell Method (DFP)}, el cual fue el primer método histórico de \emph{Quasi-Newton}. Si \(\zeta_k = 1\) se obtiene el conocido \emph{Bloyden-Fletcher-Goldfarb-Shanno Method (BFGS)}, el cual presenta mayor evidencia que es el mejor método de \emph{Quasi-Newton} de forma general.
+
+\subsection{Métodos de descenso incrementales}
+
+Si se da el caso que nuestro problema tiene la forma de
+\[f(x) = \sum_{i=1}^m g_i(x),\]
+entonces todos los métodos pueden implementarse en su versión incremental. Para un índice \(k\) y un valor \(x_k,\) se realiza el siguiente ciclo para obtener \(x_{k+1}\):
+\begin{align*}
+\psi_0	&= x_k,\\
+\psi_i	&= \psi_{i-1} - \alpha_{k, i} D_{k, i} \nabla g_i(\psi_{i-1}), \text{ para } i=1, \dotsc, m,\\
+x_{k+1}	&= \psi_m\\
+&= x_k - \sum_{i=1}^m \alpha_{k, i} D_{k, i} \nabla g_i(\psi_{i-1}).
+\end{align*}
+
+Un ejemplo clásico es el \emph{problema de mínimos cuadrados} donde \(f(x)=\frac{1}{2}\sum\limits_{i=1}^{m}\left\Vert g_{i}(x)\right\Vert ^{2}\). Aplicando el método del gradiente incremental, la iteración incremental queda
+\[\psi_i = \psi_{i-1} - \alpha_k \nabla g_i(\psi_{i-1}) g_i(\psi_{i-1}),\]
+terminando en
+\[x_{k+1} = x_k - \alpha_k \sum_{i=1}^m \nabla g_i(\psi_{i-1}) g_i(\psi_{i-1}),\]
+difiriendo de la iteración en la versión normal, vale decir,
+\[x_{k+1} = x_k - \alpha_k \sum_{i=1}^m \nabla g_i(x_k) g_i(x_k).\]
+
+\subsection{Métodos de descenso por coordenadas}
+
+Una variación simple de los métodos es considerar que en cada iteración se dejan fijas \(n-1\) coordenadas y se optimiza sólo la coordenada restante, y esto se repite recorriendo todas las coordenadas de forma determinista o aleatoria. En el caso en que el orden es cíclico, partiendo desde un punto \(x_k\) se itera desde \(i = 1, \dotsc, n\) de forma que la \(i\)-ésima coordenada de \(x_{k+1}\) es
+\begin{equation*}
+x_{k+1}^i = \argmin_{\xi} f(x_{k+1}^1, \dotsc, x_{k+1}^{i-1}, \xi, x_k^{i+1}, \dotsc, x_k^n).
+\end{equation*}
+
+\subsection{Métodos libres de derivadas}
+
+Un método conocido como \emph{Nelder-Mead Simplex Method} (no confundir con el método de Simplex de programación lineal) tiene la gran gracia que no necesita evaluar ninguna derivada de la función, por lo que es bastante deseable en casos donde \(f\) y/o sus derivadas presenta discontinuidades de algún tipo, o son muy costosas de evaluar. El algoritmo comienza con \(n + 1\) puntos \(x_0, \dotsc, x_n\) y se definen cinco puntos:
+\begin{align*}
+x_{\min}			&= \argmin_{i=0, \dotsc, n} f(x_i),\\
+x_{\max}			&= \argmax_{i=0, \dotsc, n} f(x_i),\\
+x_{2-\max}			&= \argmax_{\substack{i=0, \dotsc, n\\ x_i \neq x_{\max}}} f(x_i),\\
+\hat{x}				&= \frac{1}{n} \left(\sum_{i=0}^n x_{i} - x_{\max}\right),\\
+x_{\mathrm{ref}}	&= 2\hat{x} - x_{\max}.
+\end{align*}
+Luego, pueden pasar tres acciones diferentes según el valor de \(f(x_{\mathrm{ref}})\):
+\begin{enumerate}
+	\item \textbf{Expansión}: si \(f(x_{\min}) > f(x_{ref})\):
+	\begin{align*}
+	x_{\exp}			&= 2 x_{\mathrm{ref}} - \hat{x},\\
+	x_{\mathrm{new}}	&= \argmin_{x_{\exp}, x_{\mathrm{ref}}} f(x).
+	\end{align*}
+	\item \textbf{Reflexión}: si \(f(x_{2-\max}) > f(x_{\mathrm{ref}}) \geq f(x_{\min})\):
+	\begin{equation*}
+	x_{\mathrm{new}} = x_{\mathrm{ref}}.
+	\end{equation*}
+	\item \textbf{Contracción}: si \(f(x_{\mathrm{ref}}) \geq f(x_{2-\max})\):
+	\begin{equation*}
+	x_{\mathrm{new}} = x_{\mathrm{con}} = \frac{1}{2} \left(\hat{x} + \argmin_{x_{\max}, x_{\mathrm{ref}}}f(x)\right).
+	\end{equation*}
+\end{enumerate}
+Luego la iteración termina con un nuevo conjunto de punto donde \(x_{\max}\) es reemplazado por \(x_{\mathrm{new}}\). En caso más general, la definición de los puntos \(x_{\mathrm{ref}}\), \(x_{\exp}\) y \(x_{\mathrm{con}}\) pueden realizarse con coeficientes diferentes, pero siguiendo la misma idea. Para revisar otros métodos libres de derivadas de mayor complejidad de construcción pero con mejores resultados revisar los trabajos de \cite{39}\cite{40}\cite{41}
+
+\section{Criterios de parada}
+
+Como en general los métodos iterativos no convergen en una cantidad finita de pasos, es necesario tener un criterio de término para el número de iteraciones. Un enfoque común es parar cuando el gradiente se vuelve lo suficientemente pequeño, es decir,
+\begin{equation*}
+\left\Vert \nabla f(x_k) \right\Vert \leq \varepsilon,
+\end{equation*}
+con \(\varepsilon > 0\) pequeño. El problema de este enfoque es que no podemos saber a priori el tamaño de \(\varepsilon\) para que el método termine en un buen punto estacionario. Una opción es escalar el \(\varepsilon\) de forma que
+\begin{equation*}
+\frac{\left\Vert \nabla f(x_k) \right\Vert}{\left\Vert \nabla f(x_0) \right\Vert} \leq \varepsilon.
+\end{equation*}
+El problema de este enfoque es que puede darse el caso de que algunas coordenadas son mucho más pequeñas que otras, por lo que el gradiente no está cerca de anularse en algunas coordenadas. Otra opción es escalar las componentes, de forma que si \(d_k\) captura el escalado relativo entre las variables, por ejemplo,
+\[d_k = \left( \frac{\partial^1 f(x_k)}{\partial_1 f(x_0)}, \dotsc, \frac{\partial^n f(x_k)}{\partial_n f(x_0)}\right),\]
+entonces podemos considerar el criterio \(\left\Vert d_k \right\Vert \leq \varepsilon\). Otros criterios consideran que los cambios relativos en \(x_k\) son pequeños, o que los cambios relativos en \(f(x_k)\) son pequeños:
+\begin{align*}
+\frac{\left\Vert x_{k+1} - x_k \right\Vert}{\left\Vert x_k \right\Vert}			&\leq \varepsilon,\\
+\frac{\left\Vert f(x_{k+1}) - f(x_k)\right\Vert}{\left\Vert f(x_k)\right\Vert}	&\leq \varepsilon.
+\end{align*}
+Si \(x_k \to 0\) en el primer caso o \(f(x_k) \to 0\) en el segundo caso, entonces se pueden producir errores numéricos de punto flotante, por lo que es mejor considerar un divisor que siempre sea positivo. Para eso, escogemos un \(\bar{x}\) tal que o él sea distinto de \(0\) en el primer caso o haga que \(f(\bar{x})\) sea distinto de \(0\) en el segundo caso, como por ejemplo \(\bar{x} = x_0\) o \(\bar{x} = x_s\) con \(s\) alguna de las iteraciones pasadas, para luego hacer
+\begin{align*}
+\frac{\left\Vert x_{k+1} - x_k \right\Vert}{\left\Vert x_k \right\Vert + \left\Vert \bar{x}\right\Vert}				&\leq \varepsilon,\\
+\frac{\left\Vert f(x_{k+1}) - f(x_k) \right\Vert}{\left\Vert f(x_k) \right\Vert + \left\Vert f(\bar{x})\right\Vert}	&\leq \varepsilon.
+\end{align*}
+Todos estos criterios pueden mezclarse y solicitar que se cumplan todos juntos, además de fijar una cantidad máxima de iteraciones.
+
+\section{Reglas del Tamaño del Paso}
+
+Como vimos en la sección anterior, casi todos los métodos tienen la forma \(x_{k+1} = x_k + \alpha_k D_k\), donde \(D_k\) es la dirección del paso iterativo, escogida utilizando alguno de los métodos señalados anteriormente, y \(\alpha_k\) es el tamaño del paso. Existen diversos métodos y reglas para escoger \(\alpha_k\), desde el más simple de todos en donde \(\alpha_k\) es constante. A continuación se presentan distintas reglas para escoger \(\alpha_k\).
+
+\begin{itemize}
+	\item \textbf{Regla de Minimización}: dada una dirección \(D_k,\) entonces \(\alpha_k\) se escoge como la solución del problema
+	\begin{equation*}
+	\alpha_k = \argmin_{\alpha \geq 0} f(x_k + \alpha D_k).
+	\end{equation*}
+	
+	\item \textbf{Regla de Minimización Limitada}: dada una constante \(s > 0\) se intenta resolver
+	\begin{equation*}
+	\alpha_k = \argmin_{\alpha \in [0, s]} f(x_k + \alpha D_k).
+	\end{equation*}
+	
+	\item \textbf{Regla de Armijo}: se fijan tres constantes \(s > 0\), \(\beta \in (0, 1)\) y \(\sigma \in (0, \frac{1}{2})\) y se escoge \(\alpha_k = \beta^{m_k} s\), donde \(m_k\) es el primer entero no negativo tal que
+	\begin{equation*}
+	f(x_k) - f(x_k + \beta^{m_k} s D_k) \geq -\sigma \beta^{m_k} s \nabla f(x_k)^{\top} D_k.
+	\end{equation*}
+	
+	\item \textbf{Regla de Goldstein}: se fija una constante \(\sigma \in (0, \frac{1}{2})\) y se escoge \(\alpha_k\) tal que cumpla
+	\begin{equation*}
+	\sigma \leq \frac{f(x_k + \alpha_k D_k) - f(x_k)}{\alpha_k \nabla f(x_k)^{\top} D_k} \leq 1-\sigma.
+	\end{equation*}
+	
+	\item \textbf{Regla Geométrica}: se fijan las constantes \(s > 0\), \(\beta \in (0, 1)\) y \(\sigma \in (0, \frac{1}{2})\), y se escoge \(\alpha_k = \beta^{m_k}s\), donde \(m_k\) es el primer entero no negativo tal que
+	\begin{align*}
+	f(x_k)						&> f(x_k + \beta^{m_k} s D_k),\\
+	f(x_k + \beta^{m_k} s D_k)	&< f(x_k + \beta^{m_k + 1} s D_k).
+	\end{align*}
+	
+	\item \textbf{Paso decreciente}: se escoge una sucesión decreciente de \(\alpha_k\) tal que \(\alpha_k \to 0\), pero que no decrezca rápidamente, es decir, que \(\sum_{k=0}^{\infty} \alpha_k\) diverja. Un ejemplo es \(\alpha_k = (k+1)^{-p}\) con \(p \leq 1\).
+	
+	\item \textbf{Interpolación Cúbica}: dado un punto \(x\) y una dirección \(D\), entonces se define la función
+	\begin{align*}
+	g(\alpha)			&= f(x + \alpha D),\\
+	g^{\prime}(\alpha)	&= \dv{g(\alpha)}{\alpha} = \nabla f(x + \alpha D)^{\top} D.
+	\end{align*}
+	Vamos a suponer que \(D\) es una dirección de descenso en \(x\), por lo que se tiene que \(g^{\prime}(0) = \nabla f(x)^{\top} D < 0\). El método de Interpolación Cúbica determina en cada iteración un intervalo \([a, b]\) que contiene al menos un mínimo local de \(g(\alpha)\). Luego se ajusta un polinomio cúbico a los valores \(g(a)\), \(g(b)\), \(g^{\prime}(a)\) y \(g^{\prime}(b)\). El punto mínimo del polinomio, denotado \(\bar{\alpha}\), se encuentra en \([a, b]\) y se utiliza para reemplazar alguno de los puntos \(a\) o \(b\) para la próxima iteración. El algoritmo procede de la siguiente forma:
+	
+	\begin{enumerate}
+		\item Sea \(s > 0\) un escalar (en el caso que \(D\) aproxima bien la dirección de Newton entonces se toma \(s = 1\)). Si \(g(s)\) es \textbf{mucho mayor} que \(g(0)\) entonces es aconsejable reemplazar \(s\) por \(\beta s\) con \(\beta \in (0,1)\).
+		
+		\item Evaluar \(g(\alpha)\) y \(g^{\prime}(\alpha)\) en los puntos \(\alpha = 2^n s\) con \(n=0, 1, 2, \dotsc\) hasta encontrar dos puntos sucesivos \(a\) y \(b\) tales que o bien \(g^{\prime}(b) \geq 0\) o bien \(g(b) \geq g(a)\). En dicho caso, existe un mínimo local de \(g\) en \((a, b]\).
+		
+		\item Dado el intervalo actual \([a, b]\), se ajusta un polinomio cúbico a los valores \(g(a)\), \(g(b)\), \(g^{\prime}(a)\) y \(g^{\prime}(b)\), el cual tiene un único mínimo \(\bar{\alpha}\) en \((a,b]\) dado por
+		\begin{align*}
+		\bar{\alpha}	&= b - \frac{g^{\prime}(b) + w - z}{g^{\prime}(b) - g^{\prime}(a) + 2w}(b - a),\\
+		z				&= \frac{3(g(a) - g(b))}{b - a} + g^{\prime}(a) + g^{\prime}(b),\\
+		w				&= \sqrt{z^{2} - g^{\prime}(a) g^{\prime}(b)}.
+		\end{align*}
+		
+		\item Si \(g^{\prime}(\bar{\alpha}) \geq 0\) o \(g(\bar{\alpha}) \geq g(a)\), entonces se reemplaza \(b\) por \(\bar{\alpha}\). En caso contrario, es decir \(g^{\prime}(\bar{\alpha}) < 0\) y \(g(\bar{\alpha}) < g(a)\), entonces se reemplaza \(a\) por \(\bar{\alpha}\).
+		
+		\item El algoritmo termina cuando el intervalo tiene una longitud menor a un valor de tolerancia \(\varepsilon\) o cuando se obtiene\(\bar{\alpha} = b\).
+	\end{enumerate}
+	
+	\item \textbf{Interpolación Cuadrática}: definiendo \(g\) como en el método anterior, este método utiliza tres puntos \(a\), \(b\) y \(c\) tales que \(a < b < c\) y \(g(a) > g(b) < g(c)\). Un mínimo local de \(g\) debe estar entre los puntos \(a\) y \(c\), y en cada iteración el método ajusta un polinomio cuadrático a los valores \(g(a)\), \(g(b)\) y \(g(c)\), y reemplaza unos de los puntos \(a\), \(b\) o \(c\) por el punto mínimo del polinomio \(\bar{\alpha}\).
+	
+	El algoritmo procede de la siguiente forma:
+	\begin{enumerate}
+		\item Sea \(s > 0\) un escalar (en el caso que \(D\) aproxima bien la dirección de Newton entonces se toma \(s = 1\)). Si \(g(s)\) es \textbf{mucho mayor} que \(g(0)\) entonces es aconsejable reemplazar \(s\) por \(\beta s\) con \(\beta \in (0,1)\).
+		\item Evaluar \(g(\alpha)\) en los puntos \(\alpha = 2^n s\) con \(n = 0, 1, 2, \dotsc\) hasta encontrar tres puntos sucesivos \(a\), \(b\) y \(c\) tal que \(g(a) > g(b)\) y \(g(b) < g(c)\). En dicho caso, entonces existe un mínimo local de \(g\) en \((a, c)\).
+		\item Dados los puntos \(a\), \(b\) y \(c\), se ajusta un polinomio cuadrático a los valores \(g(a)\), \(g(b)\) y \(g(c)\) y se calcula el único mínimo \(\bar{\alpha}\) de dicho polinomio:
+		\begin{equation*}
+		\bar{\alpha} = \frac{1}{2} \frac{g(a)(c^2 - b^2) + g(b)(a^2 - c^2) + g(c)(b^2 - a^2)}{g(a)(c - b) + g(b)(a - c) + g(c)(b - a)}.
+		\end{equation*}
+		\item Si \(\bar{\alpha} > b\) entonces reemplazamos \(a\) por \(\bar{\alpha}\) si \(g(\bar{\alpha}) < g(b)\), o reemplazamos \(c\) por \(\bar{\alpha}\) si \(g(\bar{\alpha}) > g(b)\). Si \(\bar{\alpha} < b\) entonces reemplazamos \(c\) por \(\bar{\alpha}\) si \(g(\bar{\alpha}) < g(b)\), o reemplazamos \(a\) por \(\bar{\alpha}\) si \(g(\bar{\alpha}) > g(b)\). En el caso que \(g(\bar{\alpha}) = g(b)\) entonces se debe realizar un búsqueda local cerca de \(\bar{\alpha}\) para encontrar un punto \(\bar{\alpha}^{\prime}\) tal que \(g(\bar{\alpha}^{\prime}) \neq g(b)\).
+		\item El algoritmo termina cuando el intervalo tiene una longitud menor a un valor de tolerancia \(\varepsilon\).
+	\end{enumerate}
+	Una alternativa más simple de encontrar los puntos iniciales es, dado un \(a > 0\), considerar el polinomio que se ajusta a \(g(0)\), \(g^{\prime}(0)\) y \(g(a)\). En dicho caso, el mínimo corresponde a
+	\begin{equation*}
+	\bar{\alpha} = \frac{g^{\prime}(0) a^2}{2 (g^{\prime}(0)a + g(0) - g(a))}.
+	\end{equation*}
+	
+	\item \textbf{Método de la Sección Dorada}: en este método vamos a suponer que \(g(\alpha)\) es estrictamente unimodal en el intervalo \([0, s]\). Este método minimiza \(g\) sobre \([0, s]\) determinando en la \(k\)-ésima iteración un intervalo \([\alpha_k, \bar{\alpha}_k]\) que contiene al mínimo \(\alpha^{\ast}\). Para esto vamos a considerar el número
+	\begin{equation*}
+	\tau = \frac{3 - \sqrt{5}}{2},
+	\end{equation*}
+	que satisface la ecuación \(\tau = (1-\tau)^2\). El algoritmo parte desde \([\alpha_0, \bar{\alpha}_0] = [0, s]\) y procede de la siguiente forma:
+	\begin{enumerate}
+		\item Dado el intervalo \([\alpha_k, \bar{\alpha}_k]\) se calcula
+		\begin{align*}
+		b_k			&= \alpha_k + \tau (\bar{\alpha}_k - \alpha_k),\\
+		\bar{b}_k	&= \bar{\alpha}_k - \tau (\bar{\alpha}_k - \alpha_k).
+		\end{align*}
+		\item Si \(g(b_k) < g(\bar{b}_k)\) entonces
+		\[ [\alpha_{k+1}, \bar{\alpha}_{k+1}] =
+		\begin{dcases*}
+		[\alpha_k, b_{k}]		& si \(g(\alpha_k) \leq g(b_k)\),\\
+		[\alpha_k, \bar{b}_k]	& si \(g(\alpha_k) > g(b_k)\).
+		\end{dcases*}
+		\]
+		\item Si \(g(b_k) > g(\bar{b}_k)\) entonces
+		\[ [\alpha_{k+1}, \bar{\alpha}_{k+1}] =
+		\begin{dcases*}
+		[\bar{b}_k, \bar{\alpha}_k]	& si \(g(\bar{b}_k) \geq g(\bar{\alpha}_k)\), \\
+		[b_k, \bar{\alpha}_k]		& si \(g(\bar{b}_k) < g(\bar{\alpha}_k)\).
+		\end{dcases*}
+		\]
+		\item Si \(g(b_k) = g(\bar{b}_k)\) entonces \([\alpha_{k+1}, \bar{\alpha}_{k+1}] = [b_k, \bar{b}_k]\).
+		\item El algoritmo termina cuando \((\bar{\alpha}_k - \alpha_k)\) es menor a un valor de tolerancia \(\varepsilon\).
+	\end{enumerate}
+	La razón de escoger \(\tau\) es que se cumple
+	\begin{align*}
+	[\alpha_{k+1}, \bar{\alpha}_{k+1}]	&= [\alpha_k, \bar{b}_k] \implies \bar{b}_{k+1} = b_k,\\
+	[\alpha_{k+1}, \bar{\alpha}_{k+1}]	&= [b_k, \bar{\alpha}_k] \implies b_{k+1} = \bar{b}_k.
+	\end{align*}
+	por lo que en el primer caso \(\bar{b}_{k+1}\) y \(g(\bar{b}_{k+1})\) están calculados desde la iteración anterior, y lo mismo para \(b_{k+1}\) y \(g(b_{k+1})\) en el segundo caso, por lo que cada iteración (después de la primera iteración) se evalúa \(g\) solamente una vez en vez de dos.
+	
+	\item \textbf{Criterio de Parada del Paso}: existen distintos criterios de parada en la búsqueda del parámetro \(\alpha_k\). Un ejemplo bastante usado utiliza dos constantes \(\sigma \in (0, \frac{1}{2})\) y \(\beta \in (\sigma, 1)\) tal que se cumplan
+	\begin{align*}
+	f(x_k) - f(x_k + \alpha_k D_k)									&\geq -\sigma \alpha_k \nabla f(x_k)^{\top} D_k,\\
+	\left\vert \nabla f(x_k + \alpha_k D_k)^{\top} D_k \right\vert	&\leq \beta \left\vert \nabla f(x_k)^{\top} D_k \right\vert.
+	\end{align*}
+	Si \(\alpha_k\) es efectivamente el paso óptimo, entonces se cumple que
+	\[\nabla f(x_k + \alpha_k D_k)^{\top} D_k = \pdv{f(x_k + \alpha_k D_k)}{\alpha} = 0.\] Como se cumple que \(\nabla f(x_k)^{\top} D_k < 0\), entonces la segunda condición se puede reemplazar por un criterio menos estricto:
+	\begin{equation*}
+	\nabla f(x_k + \alpha_k D_k)^{\top} D_k \geq \beta \nabla f(x_k)^{\top} D_k.
+	\end{equation*}
+\end{itemize}
+
+\section{Métodos Online}
+
+Los algoritmos de entrenamiento \emph{online} se basan en entrenar los parámetros del modelo para cada nuevo dato al cual se tiene acceso. Estos algoritmos son especialmente útiles cuando los datos tienen forma de \emph{streaming}, es decir, datos que van llegando a lo largo del tiempo. Existen diversos enfoques, desde los algoritmos de fuerza bruta que hacen el entrenamiento completo agregando los nuevos casos al conjunto de datos, hasta los algoritmos incrementales que realizan nuevos cálculos usando los nuevos datos y los parámetros precalculados. Muchos algoritmos \emph{online} se obtienen a partir de adaptaciones de los algoritmos \emph{offline}, tales como aquellos que utilizan sumas a lo largo de todo el conjunto de datos, separando la suma en el conjunto del paso anterior y la suma del nuevo dato. Otros algoritmos realizan aproximaciones que, a pesar de no converger al modelo exacto, si entregan buenas aproximaciones en la práctica. A continuación se muestran algunas de las reglas generales que se usan en los algoritmos \emph{online}.
+
+\begin{itemize}
+	\item Dados los parámetros \(\theta_k\), se ponderan por \(\lambda \in (0, 1)\) y se suma una diferencia de los parámetros calculada por el nuevo dato \(D_{k+1}\) para obtener los nuevos parámetros \(\theta_{k+1}\):
+	\begin{equation*}
+	\theta_{k+1} \gets \lambda \theta_k + \partial \theta (D_{k+1}).
+	\end{equation*}
+	\item Dada la función objetivo \(Q_k\), esta se pondera por \(\lambda \in (0, 1)\) y se suma una diferencia de la función calculada por el nuevo dato \(D_{k+1}\), para luego optimizar la nueva función \(Q_{k+1}\):
+	\begin{align*}
+	Q_{k+1}			& \gets \lambda Q_k + \partial Q(D_{k+1}),\\
+	\theta_{k+1}	& \gets \argmax_{\theta} Q_{k+1}.
+	\end{align*}
+	\item Dado los parámetros \(\theta_k\), se define la función de log-verosimilitud \(\ell\) para el nuevo dato \(D_{k+1}\), la cual se pondera por \(\lambda \in (0, 1)\) y se penaliza por alguna función de distancia entre los parámetros, para luego optimizar los nuevos parámetros \(\theta_{k+1}\). Algunos de los ejemplos más comunes de la función de distancia \(d\) son la norma en \(L_2\), \(\int (\theta - \theta_k)^2 \dd{\theta}\); la distancia \(\chi\)-cuadrado \(\int \frac{(\theta - \theta_k)^2}{\theta_k} \dd{\theta}\); y la divergencia de Kullback-Leibler \(\int \theta \log (\frac{\theta}{\theta_k}) \dd{\theta}\):
+	\begin{equation*}
+	\theta_{k+1} \gets \argmax_{\theta} \lambda \ell (D_{k+1} \mid \theta) - d(\theta, \theta_k).
+	\end{equation*}
+\end{itemize}
+
+
+
+\section{Gradiente Estocástico}
+
+Si se da el caso que nuestra función objetiva depende de \(n\) datos \(D_n = (d_1,...,d_n)\), entonces en cada iteración de gradiente se puede usar una versión modificada de la función, al samplear un subconjunto de \(D_n\) de \(k\) elementos, denotada una instancia como \(\hat{D_k}\), por lo que en cada iteración usamos una estimación de \(f(\theta\lvert D_n)\) como \(\hat{f}_k(\theta) = f(\theta\lvert \hat{D}_k)\), generando la iteración \[\theta_{t+1} = \theta_t - \alpha_t \nabla \hat{f_{k_t}}(\theta_t).\]
+
+En general tenemos que \(\mathcal{O}(f) = \mathcal{O}(n)\), por lo que la aproximación se puede ajustar por un factor correctivo que es la proporción de datos, quedando una mejor estimación como \[\hat{f}_k(\theta) = \frac{n}{k}f(\theta\lvert \hat{D}_k).\]
+
+\section{Momentum}
+
+Puede ser que, al cambiar la función objetivo en cada iteración, la dirección cambie significativamente de una iteración a otra. Es deseable tener una cierta consistencia en la dirección del gradiente, por lo que se puede tomar una versión suavizada con memoria exponencial de los gradientes. Esto se llama momentum, y dado un parámetro del momentum \(\beta \in (0,1)\), la iteración del algoritmo SGD se ve reemplazada por
+\[m_{t+1} = \beta m_t + (1-\beta) \nabla \hat{f_{k_t}}(\theta_t),\]
+\[\theta_{t+1} = \theta_t - \alpha_t  m_{t+1}.\]
+
+\section{Tasas de aprendizajes dinámicas}
+
+Un problema conocido es que a medida que nos vamos acercando al óptimo, las derivadas van haciéndose cercanas a cero, por lo que el tamaño del paso tiende a ser cero y el algoritmo no converge al óptimo. Una forma de abordar este problema es haciendo que la tasa de aprendizaje \(\alpha_t\) crezca a medida que las derivadas se hacen pequeñas. Esto se quiere hacer por coordenada, por lo que necesitamos un vector de tasas de aprendizajes, que cumplan
+\[\mathcal{O}(\alpha_{t}) = \frac{\alpha_0}{\lvert m_{t+1} \rvert}.\]

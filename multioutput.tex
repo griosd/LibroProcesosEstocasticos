@@ -1,0 +1,236 @@
+%!TEX root = main.tex
+
+\chapter{Procesos Gaussianos Multioutput}
+
+\begin{chapquote}{Gonzalo Ríos, 2023}
+	``Aquí falta una cita.''
+\end{chapquote}
+
+\comment{parrafo: introduciendo el capitulo, resumir que se va a ver y los alcances}
+
+\comment{mencionar intuición y motivaciion, por qué queremos modelar muchos outputs? comparar con modelos independientes de GP. Mencionar ejemplos y casos de aplicación}
+
+Hasta ahora, todos los GP que hemos presentado son de una sola dimensión en la salida, es decir \(\calY \subseteq \reals.\) En muchas aplicaciones es deseable poder modelar funciones de mayor dimensión. Veamos a continuación diferentes construcciones que permiten que el espacio de salda sea multidimensional con \(\dim( \calY) = M > 1\). En general, un GP multioutput se denotará como MOGP:
+
+\begin{align*}
+	\vec{f}(t)			&\sim \MOGP(\vec{m}(t), K(t, \bar{t})), \\
+	K(t, \bar{t})		&= [k_{ij}(t, \bar{t})]_{i,j=1}^{M}, \\
+	k_{ij}(t, \bar{t})	&= \cov[f_{i}(t), f_{j}(\bar{t})].
+\end{align*}
+Por convención, diremos que una función \(k_{ij}(t, \bar{t}) \) es de covarianza cruzada cuando \(i \neq j\).
+
+\section{Modelo Multioutput Independiente}
+
+El esquema más simple es considerar \(M\) funciones \(f_{i}(t) \sim \GP(m_{i}(t), k_{i}(t, \bar{t}))\) independientes con covarianza cruzada nula, es decir, \(\cov[f_{i}(t), f_{j}(\bar{t})] = 0\) si \(i \neq j\). De esta forma, se tiene que \(\vec{f}\) se distribuye MOGP.
+\begin{align*}
+	\vec{f}(t)			&\sim \MOGP(\vec{m}(t), K(t, \bar{t})), \\
+	K(t, \bar{t})		&= \diag([k_{1}(t, \bar{t}), \dotsc, k_{n}(t, \bar{t})]), \\
+	k_{ij}(t, \bar{t})	&= \cov[f_{i}(t), f_{j}(\bar{t})] = \delta_{ij} k_{i}(t, \bar{t}).
+\end{align*}
+
+En este modelo no se considera la covarianza cruzada entre las dimensiones de salida, por lo que la distribución posterior de cada componente coincide con el caso unidimensional.
+
+\section{Proceso Gaussiano Multitarea}
+
+El esquema de un proceso gaussiano multitarea \cite{43} (también conocido como \emph{multi-task gaussian process}, \emph{multiple output kernles}, \emph{vector-valued kernels}, \emph{coregionalized regression} o \emph{cokriging} en inglés \cite{46}) permite relacionar múltiples salidas con un único kernel y un peso entre cada par de componentes. Sea \(k\) un kernel sobre \(\calT\) y \(C \in \reals^{M \times M}\) una matriz semidefinida positiva. Denotemos por \(\otimes\) el producto de Kronecker, es decir, si \(A \in \reals^{p \times q}\) y \(B \in \reals^{r \times s}\), se tiene que
+\begin{equation*}
+	A \otimes B = [a_{ij}B]_{i,j=1}^{p,q} = \begin{bmatrix}
+		a_{11}B	& \ldots	& a_{1q}B \\
+		\vdots	& \ddots	& \vdots \\
+		a_{p1}B	& \ldots	& a_{pq}B
+	\end{bmatrix}.
+\end{equation*}
+
+Definimos entonces el MOGP con kernel
+\begin{align*}
+	K(t, \bar{t})		&= C \otimes k(t, \bar{t}), \\
+	k_{ij}(t, \bar{t})	&= \cov[f_{i}(t), f_{j}(\bar{t})] = c_{ij} k(t, \bar{t}).
+\end{align*}
+Sean \(t_{1}, \dotsc, t_{n}\) los puntos de entrada e \(\bfy_{1}, \dotsc, \bfy_{n}\) vectores de salida. Denotemos \(\bfy_{t} = [y_{t,1}, \dotsc ,y_{t,M}] \in \reals^{M}\). Entonces la distribución posterior de este MOGP está dada por
+\begin{align*}
+	\mean[f_{i}(\bar{t}) \mid t_{1:n}, \bfy_{1:n}]	&= [c_{i, 1:D} \otimes k(\bar{t}, t_{1:n})]^{\top} \Sigma^{-1} \bfy_{1:n} \\
+	\Sigma											&= C \otimes K_{\bar{t}} + \diag(\sigma_{1:d}^{2}) \otimes I_{n} \\
+	p(f(t_{1:n}) \mid t_{1:n}, \bfy_{1:n})			&= \calN\left( [C \otimes K_{\bar{t}, t_{1:n}}]^{\top} \Sigma^{-1} \bfy_{1:n}, \right.\\
+													&\left. \qquad [C \otimes K_{\bar{t}}]^{\top} - [C \otimes K_{t_{1:n}}]^{\top} \Sigma^{-1} [C \otimes K_{t_{1:n}}]\right)
+\end{align*}
+
+\begin{proposition}
+	Si \(\sigma_{i}^{2} = 0\) para \(i = 1, \dotsc, d\) entonces las funciones \(f_{i}\) son independientes entre si, ya que
+	\begin{equation*}
+		\mean\left[ f_{i}(\bar{t}) \mid t_{1:n}, \bfy_{1:n}\right] = k(\bar{t}, t_{1:n})^{\top} K_{t_{1:n}}^{-1} \bfy_{i,1:n}.
+	\end{equation*}
+\end{proposition}
+
+Una forma equivalente de representar el modelo es el método combinado \cite{44}, suponiendo que \(f_{i}(t_{r}) = g(i, t_{r})\), con \(g \sim \GP(0, k_{g})\) y que \(k_{g}\) es un kernel multiplicativo del tipo \(k_{g}((i, t_{r}), (j, t_{s})) = k_{M}(i, j) k(t_{r}, t_{s})\) sobre \(\{1, \dotsc, M\} \times \calT\). De esta forma, el MOGP se puede escribir de forma
+\begin{align*}
+	f_{i}(t)						&= g(i, t), \\
+	g(i, t)							&\sim \GP(m(i, t), k_{g}[(i, t_{r}), (j, t_{s})]), \\
+	k_{g}((i, t_{r}), (j, t_{s}))	&= k_{M}(i, j) k(t_{r}, t_{s}) = c_{ij} k(t_{r}, t_{s}).
+\end{align*}
+
+\comment{agregar intuición de que se acaba de definir, que significa y aplicación tiene.}
+
+\section{Proceso Gaussiano Complejo}
+
+\comment{se siente inconexo esta sección, agregar un poco más de texto para contextualizar el por que de una covarianza compleja. ya sea con palabras o con monitos.}
+
+Una opción es modelar nuestro proceso de forma que la función es compleja \cite{tobar2015modelling}, es decir \(\calY = \complex\). Para esto, definamos una gaussiana en el plano complejo.
+
+\begin{definition}
+	Una variable aleatoria \(Z\) en \(\complex^{n}\)\ que sigue una distribución compleja multivariada gaussiana se denota como
+	\begin{equation*}
+		z\sim \CN(\mu, C, P),
+	\end{equation*}
+	donde los parámetros son la media \(\mu \in \complex^{n}\), la covarianza \(C \in \reals^{n \times n}\) y la seudocovarianza \(P \in \complex^{n\times n}\). Por simplicidad tomaremos la media nula. Entonces la función de distribución es
+	\begin{align*}
+		p(Z)	&= \frac{1}{\pi^{n} \sqrt{\vert \Sigma \vert }} \exp \left(-\frac{1}{2} \xi^{H} \Sigma^{-1} \xi \right), \\
+		\xi		&= \begin{bmatrix} Z, Z^\ast\end{bmatrix},\\
+		\Sigma	&= \begin{bmatrix} C & P \\ P^\ast & C^\ast \end{bmatrix},\\
+		C		&= \mean[ZZ^\ast],\\
+		P		&= \mean[ZZ^{\top}].
+	\end{align*}
+\end{definition}
+
+\begin{proposition}
+	Sean \(f\) y \(h\) dos funciones reales, y sea \(g\) la función compleja dada por \(g(t) = f(t) +ih(t)\), donde \(i\) es la unidad imaginaria. Definamos los kernels de covarianza de \(f\) y \(h\) de forma que
+	\begin{align*}
+		\mean[f(t) f(\bar{t})]	&= k_{rr}(t, \bar{t}),\\
+		\mean[h(t) h(\bar{t})]	&= k_{ii}(t, \bar{t}),\\
+		\mean[f(t) h(\bar{t})]	&= k_{ri}(t, \bar{t})\\
+								&= k_{ir}(\bar{t}, t).
+	\end{align*}
+	Las funciones de covarianza y seudocovarianza de \(g\) son de la forma
+	\begin{align*}
+	C(t, \bar{t})	&= \mean[f(t) f^{\ast }(\bar{t})] \\
+					&= k_{rr}(t, \bar{t}) +k_{ii} (t, \bar{t}),\\
+	P(t, \bar{t})	&= \mean[f(t) f(\bar{t})]\\
+					&= k_{rr}(t, \bar{t}) - k_{ii}(t, \bar{t}) + 2 i k_{ir}(t, \bar{t}).
+	\end{align*}
+\end{proposition}
+
+\begin{proposition}
+	Si \(P(t, \bar{t}) = 0\), entonces \(k_{ir}(t, \bar{t}) = 0\) y \(k_{rr}(t, \bar{t}) = k_{ii}(t, \bar{t})\).
+\end{proposition}
+
+Podemos pensar que \(f = X + Y\) y \(h = X + Z\), donde \(X, Y,\) y \(Z\) son tres GP independientes, y si denotamos \(g = [f, h]^\top\) entonces se tiene que el kernel de \(g\) es de la forma
+\begin{equation*}
+	k_{gg} = \begin{bmatrix} k_{ff} & k_{fh} \\ k_{hf} & k_{hh} \end{bmatrix} = \begin{bmatrix} k_{xx} + k_{yy} & k_{xx} \\ k_{xx} & k_{xx} + k_{zz} \end{bmatrix} = \begin{bmatrix} k_{rr} & k_{ir} \\ k_{ir} & k_{ii} \end{bmatrix}.
+\end{equation*}
+
+\section{Modelo Factorial Latente Semiparametrico}
+
+En \cite{teh2005semiparametric} se presenta el modelo factorial latente semiparamétrico, un modelo simple pero poderoso para relacionar múltiples salidas. La idea se basa en combinar \(N\) fuentes GP independientes, y cada una de las \(M\) salidas es una combinación lineal diferente. En el caso en que la variable de entrada es el tiempo, este modelo se conoce como un análisis factorial de procesos gaussianos \cite{50}, pero en general el espacio \(\calX\) es multidimensional.
+
+Sea \(W \in \reals^{M \times N}\) una matriz de pesos y sean \(h_1, \dotsc, h_N\) variables latentes independientes tales que \(h_{n} \sim \GP(m_{n}, k_{n}) \) y \(\cov(h_{n}, h_{m}) = 0\) para \(n, m = 1, \dotsc, N\) con \(m \neq n\). Denotando \(K = \diag([k_{1}, \dotsc, k_{n}])\) y \(W_{n} = [w_{1, n} k_{n}, \dotsc, w_{M,n} k_{n}]\), entonces se tiene que la función definida como \(\vec{f} = W \vec{h}\) es un MOGP de la forma
+\begin{align*}
+	\vec{f}				&\sim \MOGP(W \vec{m}, WKW^{\top}), \\
+	f_{i}				&\sim \GP \left(\sum_{n=1}^{N} w_{i, n} m_{n}, \sum_{n=1}^{N} w_{i,n}^{2} k_{n} \right) \\
+	h_{n} \mid \vec{f}	&\sim \calN\left(m_{i} + W_{n} \left(WKW^{\top}\right)^{-1} (\vec{f} - W\vec{m}), k_{n} - W_{n} \left(WKW^{\top}\right)^{-1} W_{n}^{\top}\right).
+\end{align*}
+
+En este esquema, se tiene que las funciones de covarianzas cruzadas se pueden escribir como
+\begin{align*}
+	k_{ij}(t, \bar{t})				&= \sum_{n=1}^{N} w_{in} w_{jn} k_{n}(t, \bar{t}), \\
+	\cov(f_{i}(t), h_{n}(\bar{t}))	&= w_{i,n} k_{n}(t, \bar{t}).
+\end{align*}
+
+Hasta ahora, todos los esquemas se han basado en componer linealmente una cantidad de kernels base, y cada enfoque depende de la forma de componer \comment{comentar aca que limitaciones tiene eso y por que queremos modelos más flexibles}. Un esquema más general sería tomar un operador lineal que conserve la
+propiedad de ser definido positivo. Un operador que cumple esto es la convolución, lo cual nos permitirá expresar covarianzas cruzadas más generales \comment{comentar por que eso es bueno, mostrar/comentar un ejemplo en el cual modelos de composición lineal fallan}.
+
+\section{Redes de Regresión con Procesos Gaussianos}
+
+En \cite{45} se plantea un modelo para GP multioutput basado en redes neuronales bayesianas \cite{55}, en donde se concuye el resultado de que el límite de una red neuronal bayesiana de una capa con infinitas neuronal ocultas converge a un GP. Los autores extienden estos conceptos en un modelo llamado red de regresión de procesos gaussianos (denotado GPRN por sus siglas en inglés, \emph{Gaussian Process Regression Networks}), que permite relacionar las entradas y el ruido correlacionado entre múltiples variables de salida.
+
+Siguiendo nuestra notación, consideremos los datos de la forma \(\calD = \{t_{n}, \bfx_{n}\}_{n=1}^{N}\) con \(\bfx_{n} \in \calX\) y \(\dim(\calX) > 1\). Que la dimensión del espacio de entrada sea mayor que \(1\) se modela con kernels multidimensionales, tema ya profundizado en capítulos anteriores, por lo que no haremos ningún supuesto sobre \(\calX\). El modelo GPRN se especifica a continuación.
+
+\begin{definition}
+	Sean \([F(t)]_{j} = f_{j}(t)\) \(q\) funciones tales que \(f_{j} \sim \GP (0, k_{j})\) para \(j = 1, \dotsc, q\). Digamos que \(\dim(\calY) = p\), y sean \(w_{ij}\) \(p \times q\) funciones tales que \(w_{ij} \sim \GP (0, k_{w})\) para \(i = 1, \dotsc, p\) y \(j = 1, \dotsc, q\). Dados dos procesos multivariados de ruido blanco \(\varepsilon \sim \calN(0, I_{q})\) y \(\zeta \sim \calN(0, I_{p})\), se dice que \(\bfx\) es un GPRN si
+	\begin{equation*}
+	\bfx(t) = W(t) [F(t) + \sigma_{f} \varepsilon] + \sigma_{y}\zeta
+	\end{equation*}
+\end{definition}
+
+Denotamos
+\begin{align*}
+\hat{k}_{j}(x_{t_{1}}, x_{t_{2}})	&= k_{j}(x_{t_{1}}, x_{t_{2}}) + \sigma_{f}^{2} \delta_{t_{1}, t_{2}}, \\
+\hat{f}_{j}(t)						&= f_{j}(t) + \sigma_{f} \varepsilon \sim \GP(0, \hat{k}_{j}).
+\end{align*}
+
+Si suponemos que todas las funciones de peso \(w_{ij}\) tienen la misma función de covarianza \(k_{w}\), se está suponiendo a priori que los pesos varían con respecto a \(t\) con la misma medida. Más aún, si uno considera que todos los pesos son constantes, \(w_{ij}(t) = \bar{w}_{ij}\), entonces se recupera el modelo factorial latente semiparamétrico. Es posible reescribir \(y\) de forma
+\begin{equation*}
+\bfx(t) = W(t) F(t) + (\sigma_{f} W(t) \varepsilon + \sigma_{y}\zeta),
+\end{equation*}
+por lo que las funciones de media y de covarianza asociada a \(y_{i}\) son
+\begin{align*}
+m_{y_{i}}(x_{n})				&= \sum_{j=1}^{q} w_{ij}(x_{n}) f_{j}(x_{n}) \\
+k_{y_{i}}(x_{t_{1}}, x_{t_{2}})	&= \sum_{j=1}^{q} w_{ij}(x_{t_{1}}) \hat{k}_{j}(x_{t_{1}}, x_{t_{2}}) w_{ij}(x_{t_{2}}) + \sigma_{y}^{2} \delta_{t_{1}, t_{2}}
+\end{align*}
+
+Si \(q < p\), entonces el modelo realiza una reducción de dimensionalidad (conocida como model factorial latente, o \emph{latent factor model} en inglés). Es directo ver que la amplitud \(\sum_{j=1}^{q}w_{ij}(x_{t_{1}}) w_{ij}(x_{t_{2}})\) es no estacionaria, independiente de si los \(\hat{k}_{j}\) son estacionarios o no, por lo que la salida de la red es no estacionaria. Se puede pensar que el kernel de covarianza \(k_{y_{i}}\) puede moverse a través de regiones del espacio con estructuras de covarianza completamente diferente entre sí. El ruido del proceso \(\bfx\) es \(\sigma_{f}^{2} W(t) W(t)^{\top} + \sigma_{y}^{2} I_{p}\), y como todas las entradas de \(W(t)\) son un GP, este modelo de ruido es un proceso de Wishart generalizado \cite{wilson2010generalised}.
+
+Veamos ahora como entrenar el modelo a partir de los datos. Sean \(\calD = \{t_{n}, \bfx_{n}\}_{n=1}^{N}\) los datos y sea \(\Theta = \{\theta_{f}, \theta_{w}, \sigma_{f}, \sigma_{y}\}\) el conjunto de hiperparámetros. Es factible considerar hiperparámetros en común, como por ejemplo tener un único \emph{length-scale} compartido entre todos los \(f_{j}\) . Definiendo
+\[\bfu = (\hat{\bff}, W) = \left\{\hat{f}_{j}(t_{n}), w_{ij}(t_{n}) \mid j=1, \dotsc, q; i=1, \dotsc, p\right\}_{n=1}^{N},\]
+entonces
+\begin{align*}
+p(\bfu \mid \theta_{f}, \theta_{w}, \sigma_{f})	&= \calN(0, C_B), \\
+C_{B}											&\in \reals^{N q (p+1) \times N q(p+1)},
+\end{align*}
+donde \(C_{B}\) es una matriz diagonal por bloques con \(q (p+1)\) bloques de tamaño \(N \times N\), de modo que sus primeros \(q\) bloques son \(B_{j} = \hat{k}_{j}(t_{1:N}, t_{1:N})\), y el resto de los \(p \times q\) bloques \(B_{ij} = k_{w}(t_{1:N}, t_{1:N})\) son iguales entre sí. La verosimilitud de los datos se escribe como
+\begin{equation*}
+p(\calD \mid \bfu, \sigma_{y}) = \prod_{n=1}^{N} \calN\left(\bfx_{n}; W(t_{n}) \hat{F}(t_{n}), \sigma_{y}^{2} I_{p}\right),
+\end{equation*}
+y al aplicar el Teorema de Bayes se concluye que la distribución posterior de \(\bfu\) es
+\begin{equation*}
+p(\bfu \mid \calD, \Theta) \propto \calN(\bfu; 0, C_{B}) \prod_{n=1}^{N} \calN\left(\bfx_{n}; W(t_{n}) \hat{F}(t_{n}), \sigma_{y}^{2} I_{p}\right).
+\end{equation*}
+Un método eficaz para muestrear \(p(\bfu \mid \calD, \Theta)\) es con los métodos de inferencia aproximada basados en MCMC, destacando para este caso el método de muestreo de corte elíptico (\emph{elliptical slice sampling} en inglés) \cite{murphybook2012}, ya que está diseñado para posteriores con distribuciones a priori gaussianas y correlacionados.
+
+\comment{falta una aterrizada de la matematica, explicar intuición y para que sirve este tipo de modelo.}
+
+\section{Procesos Gaussianos Convolucionales}
+
+En vez de tomar combinaciones lineales de fuentes gaussianas, es posible construir un MOGP con sumas de convoluciones de fuentas gaussianas, modelo conocido como procesos gaussianos convolucionales \cite{boyle2004dependent} \comment{mencionar por que es deseable tener este tipo de modelos}. Para introducir el modelo, definamos el operador conocido como filtro lineal.
+
+\begin{definition}
+	En filtro lineal \(H\) asociado al kernel \(h\) es un operador lineal tal que
+	\begin{align*}
+		g(t)	&= (Hf)(t)\\
+				&= h(t, \cdot) \ast f(\cdot) \\
+				&= \int_{-\infty}^{\infty} h(t, z) f(z) \dd{z}
+	\end{align*}
+\end{definition}
+
+Los filtros lineales cumplen la propiedad de que si \(f\) es un GP, entonces \(Hf\) también es un GP.
+
+\begin{proposition}
+	Si \(f \sim \GP (0, k_{f})\) entonces \(Hf \sim \GP(0, k_{h})\), donde el kernel se puede escribir como
+	\begin{equation*}
+		k_{h}(t, \bar{t}) = \int_{-\infty}^{\infty} h(t, z) k_{f}(z, \bar{z}) h(\bar{z}, \bar{t}) \dd{z} \dd{\bar{z}}.
+	\end{equation*}
+\end{proposition}
+
+Consideremos \(W \sim \GP (0, \sigma_{i} \delta_{x, \bar{t}})\) un proceso estacionario de ruido blanco (en inglés \emph{white noise}). Sean \(h_{1}\), \(h_{2}\), \(k_{1}\) y \(k_{2}\) kernels de covarianza. Definamos los procesos dependientes como
+\begin{align*}
+	g_{i}(t)	&\sim \GP(0, k_{i}), \\
+	v_{i}(t)	&= \int_{\calX} h_{i}(t, \bar{t}) W(\bar{t}) \dd{\bar{t}}, \\
+	f_{i}(t)	&= g_{i}(t) + v_{i}(t),
+\end{align*}%
+para \(i = 1,2\). De esta forma, podemos construir un MOGP con \(f_{1}\) y \(f_{2}\).
+
+\begin{proposition}
+	Sean \(f_{1}\) y \(f_{2}\) dos procesos dependientes. Entonces se tiene que conjuntamente son un MOGP de la forma:
+	\begin{align*}
+		\begin{bmatrix} f_{1} \\ f_{2} \end{bmatrix}	&\sim \GP\left(0, \begin{bmatrix} k_{11} & k_{12} \\ k_{12} & k_{22} \end{bmatrix}\right), \\
+		k_{11}(t, \bar{t})								&= k_{1}(t, \bar{t}) + \int_{\calX} h_{1}(t, z) h_{1}(z, \bar{t}) \dd{z}, \\
+		k_{22}(t, \bar{t})								&= k_{2}(t, \bar{t}) + \int_{\calX} h_{2}(t, z) h_{2}(z, \bar{t}) \dd{z}, \\
+		k_{12}(t, \bar{t})								&= \int_{\calX} h_{1}(t, z) h_{2}(z, \bar{t}) \dd{z}.
+	\end{align*}
+\end{proposition}
+
+La generalización a más dimensiones de salida es directo, de forma que las funciones de covarianza cruzada se escriben como
+\[k_{ij}(t, \bar{t}) = \int_{\calX} h_{i}(t, z) h_{j}(z, \bar{t}) \dd{z}.\]
+Detalles de cómo implementar el modelo de forma eficiente se pueden revisar en \cite{alvarez2011computationally}\cite{alvarez2008sparse}.
+
+\comment{falta alguna sección o algo con ejemplos, mostrar un caso de estudio o algo más alla de las ecuaciones}
+
+\comment{parrafo: cerrar ideas, resumir brevemente el capitulo, contar sobre temás más allá para profundizar. Referenciar papers o libros}
